@@ -40,4 +40,3 @@ networks:
   postgres-network:
     name: postgres-network
     driver: bridge
-    external: true
