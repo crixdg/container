@@ -6,7 +6,6 @@ services:
       - "6379:6379"
     command:
       - redis-server
-      - -h
     deploy:
       resources:
         limits:
