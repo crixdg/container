@@ -1,0 +1,42 @@
+services:
+  redis:
+    image: ${REGISTRY:-}redis:{REDIS_VERSION:-latest}
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command:
+      - redis-server
+      - -h
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 4G
+
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+    volumes:
+      - redis-data:/data
+    networks:
+      - redis-network
+
+volumes:
+  redis-data:
+    name: redis-data
+    driver: local
+
+networks:
+  redis-network:
+    name: redis-network
+    driver: bridge
