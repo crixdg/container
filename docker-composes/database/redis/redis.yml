@@ -1,6 +1,6 @@
 services:
   redis:
-    image: ${REGISTRY:-}redis:{REDIS_VERSION:-latest}
+    image: ${REGISTRY:-}redis:${REDIS_VERSION:-latest}
     container_name: redis
     ports:
       - "6379:6379"
