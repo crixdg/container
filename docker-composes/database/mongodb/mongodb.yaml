@@ -1,0 +1,42 @@
+services:
+  mongodb:
+    image: ${REGISTRY:-}mongo:${MONGODB_VERSION:-latest}
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - mongodb-network
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 8G
+
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+
+volumes:
+  mongodb-data:
+    name: mongodb-data
+    driver: local
+
+networks:
+  mongodb-network:
+    name: mongodb-network
+    driver: bridge
