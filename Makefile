@@ -1,5 +1,3 @@
-
-
 COMPOSE := docker compose
 
 # -- Database --
