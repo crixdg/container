@@ -1,0 +1,98 @@
+services:
+  sonarqube:
+    image: ${REGISTRY:-}sonarqube:${SONARQUBE_VERSION:-9.9.1-community}
+    container_name: sonarqube
+    restart: unless-stopped
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/sonar
+      SONAR_JDBC_USERNAME: ${SONAR_DB_USER:-sonar}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+    ports:
+      - "${SONARQUBE_PORT:-9000}:9000"
+    volumes:
+      - sonarqube-conf:/opt/sonarqube/conf
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-logs:/opt/sonarqube/logs
+      - sonarqube-extensions:/opt/sonarqube/extensions
+    networks:
+      - sonarqube-network
+    depends_on:
+      sonarqube-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+
+  sonarqube-db:
+    image: ${REGISTRY:-}postgres:${POSTGRES_VERSION:-17.5}
+    container_name: sonarqube-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sonar
+      POSTGRES_USER: ${SONAR_DB_USER:-sonar}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:-sonar}
+    volumes:
+      - sonarqube-db-data:/var/lib/postgresql/data
+    networks:
+      - sonarqube-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SONAR_DB_USER:-sonar} -d sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+
+volumes:
+  sonarqube-conf:
+    name: sonarqube-conf
+    driver: local
+  sonarqube-data:
+    name: sonarqube-data
+    driver: local
+  sonarqube-logs:
+    name: sonarqube-logs
+    driver: local
+  sonarqube-extensions:
+    name: sonarqube-extensions
+    driver: local
+  sonarqube-db-data:
+    name: sonarqube-db-data
+    driver: local
+
+networks:
+  sonarqube-network:
+    name: sonarqube-network
+    driver: bridge

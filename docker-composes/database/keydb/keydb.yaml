@@ -1,22 +1,22 @@
 services:
-  redis:
-    image: ${REGISTRY:-}redis:${REDIS_VERSION:-7.4}
-    container_name: redis
+  keydb:
+    image: ${REGISTRY:-}eqalpha/keydb:${KEYDB_VERSION:-x86_64_v6.3.4}
+    container_name: keydb
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${KEYDB_PORT:-6379}:6379"
     command: [
-      "redis-server",
+      "keydb-server",
       "--maxmemory", "4gb",
       "--maxmemory-policy", "allkeys-lru",
       "--save", ""
     ]
     volumes:
-      - redis-data:/data
+      - keydb-data:/data
     networks:
-      - redis-network
+      - keydb-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "keydb-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,11 +41,11 @@ services:
         order: start-first
 
 volumes:
-  redis-data:
-    name: redis-data
+  keydb-data:
+    name: keydb-data
     driver: local
 
 networks:
-  redis-network:
-    name: redis-network
+  keydb-network:
+    name: keydb-network
     driver: bridge

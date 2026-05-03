@@ -1,8 +1,0 @@
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'performance-engine'
-    static_configs:
-      - targets: ['performance-engine:8080']
-    metrics_path: '/metrics'

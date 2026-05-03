@@ -1,20 +1,21 @@
 services:
-  postgres:
-    image: ${REGISTRY:-}postgres:${POSTGRES_VERSION:-18}
-    container_name: postgres
+  mysql:
+    image: ${REGISTRY:-}mysql:${MYSQL_VERSION:-8.1}
+    container_name: mysql
     restart: unless-stopped
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mysql}
+      MYSQL_USER: ${MYSQL_USER:-mysql}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - mysql-data:/var/lib/mysql
     networks:
-      - postgres-network
+      - mysql-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-password}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,8 +24,7 @@ services:
       resources:
         limits:
           cpus: "2"
-          memory: 8G
-      # Swarm-only fields below
+          memory: 4G
       replicas: 1
       update_config:
         parallelism: 1
@@ -40,11 +40,11 @@ services:
         order: start-first
 
 volumes:
-  postgres-data:
-    name: postgres-data
+  mysql-data:
+    name: mysql-data
     driver: local
 
 networks:
-  postgres-network:
-    name: postgres-network
+  mysql-network:
+    name: mysql-network
     driver: bridge
