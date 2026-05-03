@@ -1,0 +1,41 @@
+services:
+  prometheus:
+    image: ${REGISTRY:-}prom/prometheus:${PROMETHEUS_VERSION:-v3.0.0}
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./x/prometheus_cfg.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - observability-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+
+volumes:
+  prometheus-data:
+    name: prometheus-data
+    driver: local
+
+networks:
+  observability-network:
+    name: observability-network
+    driver: bridge
+    external: true

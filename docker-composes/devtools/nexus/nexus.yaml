@@ -1,0 +1,40 @@
+services:
+  nexus:
+    image: ${REGISTRY:-}sonatype/nexus3:${NEXUS_VERSION:-latest}
+    container_name: nexus
+    restart: unless-stopped
+    ports:
+      - "${NEXUS_PORT:-8081}:8081"
+      - "${NEXUS_DOCKER_PORT:-8085}:8085"
+    volumes:
+      - nexus-data:/nexus-data
+    networks:
+      - nexus-network
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+
+volumes:
+  nexus-data:
+    name: nexus-data
+    driver: local
+
+networks:
+  nexus-network:
+    name: nexus-network
+    driver: bridge

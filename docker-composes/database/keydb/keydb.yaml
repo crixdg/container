@@ -1,0 +1,51 @@
+services:
+  keydb:
+    image: ${REGISTRY:-}eqalpha/keydb:${KEYDB_VERSION:-x86_64_v6.3.4}
+    container_name: keydb
+    restart: unless-stopped
+    ports:
+      - "${KEYDB_PORT:-6379}:6379"
+    command: [
+      "keydb-server",
+      "--maxmemory", "4gb",
+      "--maxmemory-policy", "allkeys-lru",
+      "--save", ""
+    ]
+    volumes:
+      - keydb-data:/data
+    networks:
+      - keydb-network
+    healthcheck:
+      test: ["CMD", "keydb-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 4G
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        max_failure_ratio: 0.25
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+        max_failure_ratio: 0.25
+        order: start-first
+
+volumes:
+  keydb-data:
+    name: keydb-data
+    driver: local
+
+networks:
+  keydb-network:
+    name: keydb-network
+    driver: bridge

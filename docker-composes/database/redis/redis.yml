@@ -1,15 +1,31 @@
 services:
   redis:
-    image: ${REGISTRY:-}redis:${REDIS_VERSION:-latest}
+    image: ${REGISTRY:-}redis:${REDIS_VERSION:-7.4}
     container_name: redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
+    command: [
+      "redis-server",
+      "--maxmemory", "4gb",
+      "--maxmemory-policy", "allkeys-lru",
+      "--save", ""
+    ]
+    volumes:
+      - redis-data:/data
+    networks:
+      - redis-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits:
           cpus: "1"
           memory: 4G
-
       replicas: 1
       update_config:
         parallelism: 1
@@ -23,10 +39,6 @@ services:
         failure_action: pause
         max_failure_ratio: 0.25
         order: start-first
-    volumes:
-      - redis-data:/data
-    networks:
-      - redis-network
 
 volumes:
   redis-data:
