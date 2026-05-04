@@ -1,16 +1,22 @@
 services:
   redis:
-    image: ${REGISTRY:-}redis:${REDIS_VERSION:-7.4}
+    image: ${REGISTRY:-}redis:${REDIS_VERSION:-8.6}
     container_name: redis
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    command: [
-      "redis-server",
-      "--maxmemory", "4gb",
-      "--maxmemory-policy", "allkeys-lru",
-      "--save", ""
-    ]
+    command:
+      [
+        "redis-server",
+        "--maxmemory",
+        "${REDIS_MAXMEMORY:-4gb}",
+        "--maxmemory-policy",
+        "${REDIS_MAXMEMORY_POLICY:-allkeys-lru}",
+        "--save",
+        "",
+        "--loglevel",
+        "notice",
+      ]
     volumes:
       - redis-data:/data
     networks:
