@@ -31,11 +31,11 @@ Every Service and Pod in the cluster gets a DNS name following this pattern:
 <name>.<namespace>.svc.cluster.local
 ```
 
-| Segment         | Meaning                                          |
-| --------------- | ------------------------------------------------ |
-| `<name>`        | Name of the Service object                      |
-| `<namespace>`   | Namespace the Service lives in                  |
-| `svc`           | Indicates this is a Service record               |
+| Segment         | Meaning                                           |
+| --------------- | ------------------------------------------------- |
+| `<name>`        | Name of the Service object                        |
+| `<namespace>`   | Namespace the Service lives in                    |
+| `svc`           | Indicates this is a Service record                |
 | `cluster.local` | The cluster domain (configurable, rarely changed) |
 
 **Example — a PostgreSQL Service in the `database` namespace:**
@@ -69,13 +69,13 @@ Resolution order for a query `postgres` from a pod in `app`:
 
 ## Record types CoreDNS returns
 
-| Query type | What it returns |
-|------------|----------------|
-| `A` / `AAAA` (ClusterIP Service) | The Service's ClusterIP |
-| `A` / `AAAA` (Headless Service) | All Pod IPs backing the Service, round-robined |
-| `A` / `AAAA` (ExternalName Service) | CNAME to the external hostname |
-| `SRV` | Port + protocol records for named ports on a Service |
-| `PTR` (reverse lookup) | Pod hostname from Pod IP |
+| Query type                          | What it returns                                      |
+| ----------------------------------- | ---------------------------------------------------- |
+| `A` / `AAAA` (ClusterIP Service)    | The Service's ClusterIP                              |
+| `A` / `AAAA` (Headless Service)     | All Pod IPs backing the Service, round-robined       |
+| `A` / `AAAA` (ExternalName Service) | CNAME to the external hostname                       |
+| `SRV`                               | Port + protocol records for named ports on a Service |
+| `PTR` (reverse lookup)              | Pod hostname from Pod IP                             |
 
 > **Headless Services** (`clusterIP: None`) have no VIP — CoreDNS returns the individual Pod IPs directly. Used by StatefulSets so each pod gets its own stable DNS name: `pod-0.myapp.namespace.svc.cluster.local`.
 
@@ -126,14 +126,14 @@ Default content:
 }
 ```
 
-| Directive | Role |
-|-----------|------|
-| `kubernetes` | Handles `.cluster.local` lookups by querying the API server |
-| `forward . /etc/resolv.conf` | Passes all other names upstream to the node's DNS |
-| `cache 30` | Caches responses for 30 seconds to reduce upstream load |
-| `hosts /etc/coredns/NodeHosts` | Resolves node hostnames — updated automatically by k3s |
-| `prometheus :9153` | Exposes DNS metrics for Prometheus scraping |
-| `loadbalance` | Round-robins A records when multiple IPs are returned |
+| Directive                      | Role                                                        |
+| ------------------------------ | ----------------------------------------------------------- |
+| `kubernetes`                   | Handles `.cluster.local` lookups by querying the API server |
+| `forward . /etc/resolv.conf`   | Passes all other names upstream to the node's DNS           |
+| `cache 30`                     | Caches responses for 30 seconds to reduce upstream load     |
+| `hosts /etc/coredns/NodeHosts` | Resolves node hostnames — updated automatically by k3s      |
+| `prometheus :9153`             | Exposes DNS metrics for Prometheus scraping                 |
+| `loadbalance`                  | Round-robins A records when multiple IPs are returned       |
 
 ---
 
@@ -236,14 +236,14 @@ curl http://localhost:9153/metrics | grep coredns_dns_requests_total
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| Pod cannot resolve any name | CoreDNS pod not running | `kubectl get pods -n kube-system -l k8s-app=coredns` — restart if not Running |
-| Pod cannot resolve cluster Service | Wrong namespace in query | Use full FQDN: `<svc>.<ns>.svc.cluster.local` |
-| Pod cannot resolve external names | Upstream DNS unreachable from node | Check `/etc/resolv.conf` on the node; verify node has internet access |
-| Slow DNS responses | Single CoreDNS replica under load | Scale to 2+ replicas; check `cache` TTL in Corefile |
-| `NXDOMAIN` for a Service that exists | Service has no Ready endpoints | `kubectl get endpoints <svc> -n <ns>` — if empty, pods are not passing readiness checks |
-| DNS works for some pods but not others | `hostNetwork: true` pods bypass CoreDNS | Pods with `hostNetwork: true` use the node's `/etc/resolv.conf`, not CoreDNS |
+| Symptom                                | Likely cause                            | Fix                                                                                     |
+| -------------------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------- |
+| Pod cannot resolve any name            | CoreDNS pod not running                 | `kubectl get pods -n kube-system -l k8s-app=coredns` — restart if not Running           |
+| Pod cannot resolve cluster Service     | Wrong namespace in query                | Use full FQDN: `<svc>.<ns>.svc.cluster.local`                                           |
+| Pod cannot resolve external names      | Upstream DNS unreachable from node      | Check `/etc/resolv.conf` on the node; verify node has internet access                   |
+| Slow DNS responses                     | Single CoreDNS replica under load       | Scale to 2+ replicas; check `cache` TTL in Corefile                                     |
+| `NXDOMAIN` for a Service that exists   | Service has no Ready endpoints          | `kubectl get endpoints <svc> -n <ns>` — if empty, pods are not passing readiness checks |
+| DNS works for some pods but not others | `hostNetwork: true` pods bypass CoreDNS | Pods with `hostNetwork: true` use the node's `/etc/resolv.conf`, not CoreDNS            |
 
 > **`hostNetwork: true` pods** do not use CoreDNS. They use the node's resolver directly, so cluster Service names do not resolve. Avoid `hostNetwork: true` for pods that need to reach cluster Services. If unavoidable, configure the node's `/etc/resolv.conf` to include `10.43.0.10` as a nameserver.
 
@@ -253,14 +253,14 @@ curl http://localhost:9153/metrics | grep coredns_dns_requests_total
 
 Services deployed by this repo and their expected DNS names:
 
-| Service | DNS name (from within cluster) |
-|---------|-------------------------------|
-| Grafana | `grafana.monitoring.svc.cluster.local` |
+| Service          | DNS name (from within cluster)                  |
+| ---------------- | ----------------------------------------------- |
+| Grafana          | `grafana.monitoring.svc.cluster.local`          |
 | Victoria Metrics | `victoria-metrics.monitoring.svc.cluster.local` |
-| Jaeger Query | `jaeger-query.tracing.svc.cluster.local` |
-| Elasticsearch | `elasticsearch.logging.svc.cluster.local` |
-| Kafka | `kafka.streaming.svc.cluster.local` |
-| PostgreSQL | `postgres.database.svc.cluster.local` |
-| Keycloak | `keycloak.iam.svc.cluster.local` |
+| Jaeger Query     | `jaeger-query.tracing.svc.cluster.local`        |
+| Elasticsearch    | `elasticsearch.logging.svc.cluster.local`       |
+| Kafka            | `kafka.streaming.svc.cluster.local`             |
+| PostgreSQL       | `postgres.database.svc.cluster.local`           |
+| Keycloak         | `keycloak.iam.svc.cluster.local`                |
 
 > Actual names depend on the `metadata.name` and `namespace` set in your Helm values. These are the defaults used by the charts in `helm-charts/`.
