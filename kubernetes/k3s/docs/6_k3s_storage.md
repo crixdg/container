@@ -163,6 +163,132 @@ kubectl patch setting default-replica-count \
 
 ---
 
+## Reclaim policy
+
+The reclaim policy on a PV controls what happens to the physical storage when the PVC is deleted.
+
+| Policy             | What happens to the PV        | What happens to the data |
+| ------------------ | ----------------------------- | ------------------------ |
+| `Delete` (default) | PV deleted automatically      | Data deleted permanently |
+| `Retain`           | PV stays, status → `Released` | Data untouched on disk   |
+
+Longhorn and local-path both default to `Delete`. Check the policy on any PV before deleting its PVC:
+
+```bash
+kubectl get pv <pv-name> -o jsonpath='{.spec.persistentVolumeReclaimPolicy}'
+```
+
+---
+
+### Why Retain
+
+`Delete` is dangerous for production databases. A single wrong command permanently destroys data:
+
+```
+kubectl delete pvc postgres-data   ← typo, wrong namespace, wrong cluster
+
+reclaimPolicy: Delete  →  database gone, unrecoverable
+reclaimPolicy: Retain  →  PV and data still on disk, recoverable
+```
+
+Other situations where Retain matters:
+
+- **Accidental deletion** — operator error, CI/CD pipeline deletes the wrong PVC
+- **StatefulSet recreation** — you delete and recreate a StatefulSet during a migration and need pods to reattach to the same data
+- **Migration** — moving data to a new PVC (larger size, different storage class) without risking loss during the transition window
+- **Compliance** — regulated environments that require data to be retained for a minimum period
+
+**Set Retain on production database PVCs** (PostgreSQL, Cassandra, Kafka) after provisioning:
+
+```bash
+kubectl patch pv <pv-name> \
+  -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+```
+
+> You cannot set the reclaim policy on the StorageClass level for existing PVs — only on the PV object itself. New PVs inherit the StorageClass default (`Delete`), so patch each production PV manually after it is created.
+
+---
+
+### Restore data from a Retained PV
+
+When a PVC is deleted and the PV has `Retain` policy, the PV stays in `Released` state. A `Released` PV cannot be automatically rebound — Kubernetes will not bind a new PVC to it because the PV still holds a reference to the old PVC in its `claimRef`.
+
+```
+PVC deleted
+    │
+    ▼
+PV status: Released   ← data intact, but claimRef still points to deleted PVC
+    │
+    ▼
+New PVC created → stays Pending — cannot bind to a Released PV automatically
+```
+
+**Step 1 — Identify the Released PV**
+
+```bash
+kubectl get pv
+# Look for STATUS = Released
+```
+
+**Step 2 — Remove the claimRef from the PV**
+
+This clears the old PVC reference and moves the PV back to `Available` so it can be rebound:
+
+```bash
+kubectl patch pv <pv-name> \
+  --type=json \
+  -p='[{"op":"remove","path":"/spec/claimRef"}]'
+
+# PV status should now show Available
+kubectl get pv <pv-name>
+```
+
+**Step 3 — Create a new PVC that binds to this specific PV**
+
+Specify `volumeName` to force Kubernetes to bind to the exact PV — not just any available PV of the right size:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-restored
+  namespace: <namespace>
+spec:
+  storageClassName: longhorn
+  volumeName: <pv-name>        # bind to this exact PV
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: <same-size-as-pv>
+EOF
+```
+
+**Step 4 — Verify the PVC is Bound**
+
+```bash
+kubectl get pvc postgres-data-restored -n <namespace>
+# STATUS should show Bound
+```
+
+**Step 5 — Update the workload to use the new PVC**
+
+```bash
+kubectl edit deployment <workload> -n <namespace>
+# Change claimName to postgres-data-restored
+```
+
+**Step 6 — Scale up and verify data**
+
+```bash
+kubectl scale deployment <workload> --replicas=1 -n <namespace>
+kubectl logs -n <namespace> -l app=<workload> --tail=50
+```
+
+> **The data was never touched** throughout this process. Steps 1–4 only manipulate Kubernetes objects — the actual bytes on disk were left intact from the moment the original PVC was deleted.
+
+---
+
 ## Access modes
 
 | Mode                  | Meaning                             | Supported by                               |
