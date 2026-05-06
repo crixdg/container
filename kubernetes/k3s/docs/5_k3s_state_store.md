@@ -24,13 +24,13 @@ State store (SQLite or etcd)   ← single source of truth for all cluster state
 
 Embedded in the k3s process. No separate installation, no configuration, no external dependency. The database file lives at `/var/lib/rancher/k3s/server/db/state.db`.
 
-|                   |                                                        |
-| ----------------- | ------------------------------------------------------ |
-| Location          | `/var/lib/rancher/k3s/server/db/state.db`              |
-| Process           | Embedded in `k3s server` — no separate daemon          |
-| HA support        | No — only one server node can write at a time          |
-| Backup            | Copy the file while k3s is stopped, or use SQLite dump |
-| Max cluster size  | Suitable for single-node and small dev clusters        |
+|                  |                                                        |
+| ---------------- | ------------------------------------------------------ |
+| Location         | `/var/lib/rancher/k3s/server/db/state.db`              |
+| Process          | Embedded in `k3s server` — no separate daemon          |
+| HA support       | No — only one server node can write at a time          |
+| Backup           | Copy the file while k3s is stopped, or use SQLite dump |
+| Max cluster size | Suitable for single-node and small dev clusters        |
 
 **Use this when:** you have one server node and do not need the cluster to survive a server failure.
 
@@ -42,25 +42,25 @@ Embedded in the k3s process. No separate installation, no configuration, no exte
 
 etcd is a distributed key-value store built for Kubernetes. When you add a second server with `--cluster-init` already set, k3s automatically switches from SQLite to embedded etcd. No manual migration is needed.
 
-|                   |                                                              |
-| ----------------- | ------------------------------------------------------------ |
-| Location          | `/var/lib/rancher/k3s/server/db/etcd/`                      |
-| Process           | Embedded in `k3s server` — no separate etcd binary needed   |
-| HA support        | Yes — quorum-based, survives minority node failures          |
-| Backup            | `k3s etcd-snapshot save`                                     |
-| Min server nodes  | 3 (quorum requires majority — 2 of 3 must be reachable)      |
+|                  |                                                           |
+| ---------------- | --------------------------------------------------------- |
+| Location         | `/var/lib/rancher/k3s/server/db/etcd/`                    |
+| Process          | Embedded in `k3s server` — no separate etcd binary needed |
+| HA support       | Yes — quorum-based, survives minority node failures       |
+| Backup           | `k3s etcd-snapshot save`                                  |
+| Min server nodes | 3 (quorum requires majority — 2 of 3 must be reachable)   |
 
 **Use this when:** you need the cluster to survive a server node failure.
 
 > **Why 3 servers and not 2?**
 > etcd requires a quorum — a majority of members must agree before any write is committed.
 >
-> | Server count | Quorum needed | Can lose |
-> |---|---|---|
-> | 1 | 1 | 0 nodes |
-> | 2 | 2 | 0 nodes — losing one halts writes |
-> | 3 | 2 | 1 node |
-> | 5 | 3 | 2 nodes |
+> | Server count | Quorum needed | Can lose                          |
+> | ------------ | ------------- | --------------------------------- |
+> | 1            | 1             | 0 nodes                           |
+> | 2            | 2             | 0 nodes — losing one halts writes |
+> | 3            | 2             | 1 node                            |
+> | 5            | 3             | 2 nodes                           |
 >
 > 2 servers is never recommended — it gives no fault tolerance and adds operational complexity. Go directly from 1 to 3.
 
@@ -70,13 +70,13 @@ etcd is a distributed key-value store built for Kubernetes. When you add a secon
 
 k3s can use an external relational database instead of SQLite or etcd. The API server connects via a `--datastore-endpoint` connection string.
 
-|                   |                                                              |
-| ----------------- | ------------------------------------------------------------ |
-| Supported DBs     | PostgreSQL, MySQL, MariaDB                                   |
-| Config            | `--datastore-endpoint` flag or `K3S_DATASTORE_ENDPOINT` env |
-| HA support        | Yes — multiple k3s server nodes share one external DB        |
-| Backup            | Standard DB backup tools (pg_dump, mysqldump)                |
-| Operational cost  | You manage the database availability separately              |
+|                  |                                                             |
+| ---------------- | ----------------------------------------------------------- |
+| Supported DBs    | PostgreSQL, MySQL, MariaDB                                  |
+| Config           | `--datastore-endpoint` flag or `K3S_DATASTORE_ENDPOINT` env |
+| HA support       | Yes — multiple k3s server nodes share one external DB       |
+| Backup           | Standard DB backup tools (pg_dump, mysqldump)               |
+| Operational cost | You manage the database availability separately             |
 
 ```bash
 # Example: use an external PostgreSQL instance
@@ -90,24 +90,24 @@ curl -sfL https://get.k3s.io | sh -s - \
 
 ## Comparison
 
-|                  | SQLite             | Embedded etcd        | External DB              |
-| ---------------- | ------------------ | -------------------- | ------------------------ |
-| Extra install    | None               | None                 | Separate DB required     |
-| HA support       | No                 | Yes                  | Yes                      |
-| Min server nodes | 1                  | 3                    | 1+                       |
-| Backup method    | File copy          | `etcd-snapshot save` | pg_dump / mysqldump      |
-| Operational cost | None               | Low                  | High                     |
-| Best for         | Dev / single node  | Production HA        | Existing DB infrastructure |
+|                  | SQLite            | Embedded etcd        | External DB                |
+| ---------------- | ----------------- | -------------------- | -------------------------- |
+| Extra install    | None              | None                 | Separate DB required       |
+| HA support       | No                | Yes                  | Yes                        |
+| Min server nodes | 1                 | 3                    | 1+                         |
+| Backup method    | File copy         | `etcd-snapshot save` | pg_dump / mysqldump        |
+| Operational cost | None              | Low                  | High                       |
+| Best for         | Dev / single node | Production HA        | Existing DB infrastructure |
 
 ---
 
 ## Top choice in production
 
-| Setup | State store |
-|-------|------------|
-| Single node or dev cluster | SQLite (default) |
-| Multi-node production cluster | Embedded etcd (3 servers) |
-| Existing managed DB infrastructure | External PostgreSQL |
+| Setup                              | State store               |
+| ---------------------------------- | ------------------------- |
+| Single node or dev cluster         | SQLite (default)          |
+| Multi-node production cluster      | Embedded etcd (3 servers) |
+| Existing managed DB infrastructure | External PostgreSQL       |
 
 > For this k3s setup, **embedded etcd with 3 server nodes is the correct choice for production**. It requires no extra infrastructure beyond the servers you already need for control-plane redundancy.
 
@@ -214,10 +214,10 @@ systemctl start k3s   # on each remaining server
 
 ## Troubleshooting
 
-| Symptom | Check |
-|---------|-------|
-| API server refuses writes, returns `etcdserver: request timed out` | Quorum lost — check how many server nodes are reachable: `kubectl get nodes` |
-| `k3s server` fails to start with `failed to find free address` | etcd port 2379/2380 already in use — check `ss -tlnp \| grep 2379` |
-| Snapshot save fails | Disk full on server node — check `df -h /var/lib/rancher` |
-| etcd member count is wrong after adding a server | New server joined with `--cluster-init` instead of `--server` — it created a separate cluster |
-| SQLite `database is locked` error in logs | Another process has the state.db file open — check for stale k3s processes |
+| Symptom                                                            | Check                                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| API server refuses writes, returns `etcdserver: request timed out` | Quorum lost — check how many server nodes are reachable: `kubectl get nodes`                  |
+| `k3s server` fails to start with `failed to find free address`     | etcd port 2379/2380 already in use — check `ss -tlnp \| grep 2379`                            |
+| Snapshot save fails                                                | Disk full on server node — check `df -h /var/lib/rancher`                                     |
+| etcd member count is wrong after adding a server                   | New server joined with `--cluster-init` instead of `--server` — it created a separate cluster |
+| SQLite `database is locked` error in logs                          | Another process has the state.db file open — check for stale k3s processes                    |
