@@ -118,6 +118,65 @@ Physical NIC (Node 1)                    Physical NIC (Node 2)
 
 **Network Policy** — rules that control which Pods can talk to which. Not all CNI plugins enforce them — Flannel does not; Cilium and Calico do.
 
+**Network Policy enforcement** means the CNI plugin reads NetworkPolicy objects from the API server and actively drops packets that violate the rules at the kernel level.
+
+Without enforcement, NetworkPolicy objects can be created but have no effect — all pods can reach all pods freely.
+
+```
+Default (no NetworkPolicy):
+
+Pod A  ──────────────────────►  Pod B   ✓
+Pod A  ──────────────────────►  Pod C   ✓
+Pod A  ──────────────────────►  Pod D   ✓
+
+With NetworkPolicy (enforced by Cilium / Calico):
+
+NetworkPolicy: allow Pod A → Pod B only
+
+Pod A  ──────────────────────►  Pod B   ✓  allowed
+Pod A  ──────────────────────►  Pod C   ✗  dropped
+Pod A  ──────────────────────►  Pod D   ✗  dropped
+```
+
+A NetworkPolicy targets pods by label and controls:
+
+| Direction | What it controls |
+|-----------|-----------------|
+| `ingress` | Who is allowed to send traffic **into** a pod |
+| `egress` | Where a pod is allowed to **send** traffic to |
+
+Example — only allow frontend pods to reach the database pod on port 5432, deny everything else:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-frontend-to-db
+  namespace: app
+spec:
+  podSelector:
+    matchLabels:
+      role: database          # this policy applies to the db pod
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              role: frontend  # only frontend pods can connect
+      ports:
+        - port: 5432
+```
+
+> **With Flannel (default k3s CNI):** the above object is saved to etcd but completely ignored — any pod can still reach the database.
+> **With Cilium or Calico:** the packet from any non-frontend pod to port 5432 is dropped at the kernel level before it ever reaches the database pod.
+
+| CNI | Enforces NetworkPolicy | Level |
+|-----|----------------------|-------|
+| Flannel | No | — |
+| Calico | Yes | L3 / L4 (IP, port, protocol) |
+| Cilium | Yes | L3 / L4 + L7 (HTTP path, method, headers) |
+
+> L7 enforcement means Cilium can allow `GET /api` but deny `DELETE /api` on the same port — something iptables-based solutions cannot do.
+
 ---
 
 ## Options
