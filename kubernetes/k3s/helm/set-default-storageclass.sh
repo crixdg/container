@@ -16,4 +16,4 @@ echo ""
 kubectl get storageclass
 echo ""
 echo "Done. New PVCs without an explicit storageClassName will now use Longhorn."
-echo "Existing local-path PVCs are unchanged — see migrate-to-longhorn.md to move them."
+echo "Existing local-path PVCs are unchanged — see docs/migrate-to-longhorn.md to move them."
