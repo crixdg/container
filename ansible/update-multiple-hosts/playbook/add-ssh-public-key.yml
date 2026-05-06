@@ -21,7 +21,7 @@
       changed_when: remove_chattr.rc == 0
 
     - name: Add public key to root's authorized_keys (idempotent)
-      authorized_key:
+      ansible.posix.authorized_key:
         user: root
         key: "{{ pubkey }}"
         state: present
