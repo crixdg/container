@@ -13,7 +13,7 @@ Lightweight Kubernetes for small production hosts. This setup targets resource-c
 | Longhorn | local-path (optional upgrade) | Replicated block storage, snapshots, backup |
 | cert-manager | Manual TLS | Automatic Let's Encrypt certificate renewal |
 
-**Default storage:** local-path provisioner is kept enabled out of the box. Longhorn can be installed alongside it and promoted to the default when you are ready — see `migrate-to-longhorn.md`.
+**Default storage:** local-path provisioner is kept enabled out of the box. Longhorn can be installed alongside it and promoted to the default when you are ready — see `docs/migrate-to-longhorn.md`.
 
 Built-in k3s components that are **always disabled**: `traefik`, `servicelb`.
 `local-storage` is disabled only when `DISABLE_LOCAL_STORAGE=true` is set in `.env`.
