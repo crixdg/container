@@ -49,15 +49,15 @@ provisioned           available to the cluster      storage class)
 
 Built into k3s. Provisions volumes as directories on the node's local filesystem — no replication, no snapshots, data lives on one node only.
 
-|                      |                                                              |
-| -------------------- | ------------------------------------------------------------ |
-| Namespace            | `kube-system`                                               |
-| StorageClass name    | `local-path`                                                |
-| Data location        | `/var/lib/rancher/k3s/storage/<pvc-name>/` on the node      |
-| Replication          | None — data lives on one node                               |
-| Snapshots            | None                                                        |
-| Access mode          | `ReadWriteOnce` only                                        |
-| Survives node loss   | No — data is lost if the node is destroyed                  |
+|                    |                                                        |
+| ------------------ | ------------------------------------------------------ |
+| Namespace          | `kube-system`                                          |
+| StorageClass name  | `local-path`                                           |
+| Data location      | `/var/lib/rancher/k3s/storage/<pvc-name>/` on the node |
+| Replication        | None — data lives on one node                          |
+| Snapshots          | None                                                   |
+| Access mode        | `ReadWriteOnce` only                                   |
+| Survives node loss | No — data is lost if the node is destroyed             |
 
 **Use this for:** dev clusters, stateless workloads that use external databases, or any workload where losing data is acceptable.
 
@@ -71,17 +71,17 @@ Built into k3s. Provisions volumes as directories on the node's local filesystem
 
 Distributed block storage. Each volume is replicated across multiple nodes. If a node fails, the volume is still available from another replica.
 
-|                      |                                                              |
-| -------------------- | ------------------------------------------------------------ |
-| Namespace            | `storage-controller`                                        |
-| StorageClass name    | `longhorn`                                                  |
-| Data location        | `/var/lib/docker/longhorn/` on each node (configurable)     |
-| Replication          | Configurable — default 1 replica in this repo               |
-| Snapshots            | Yes — manual and scheduled                                  |
-| Backup               | Yes — to S3 or NFS                                          |
-| Access mode          | `ReadWriteOnce`, `ReadWriteMany` (via share manager)        |
-| Survives node loss   | Yes — if replica count > 1 and replicas are on different nodes |
-| UI                   | Web UI at `longhorn.example.com` (ingress configured)       |
+|                    |                                                                |
+| ------------------ | -------------------------------------------------------------- |
+| Namespace          | `storage-controller`                                           |
+| StorageClass name  | `longhorn`                                                     |
+| Data location      | `/var/lib/docker/longhorn/` on each node (configurable)        |
+| Replication        | Configurable — default 1 replica in this repo                  |
+| Snapshots          | Yes — manual and scheduled                                     |
+| Backup             | Yes — to S3 or NFS                                             |
+| Access mode        | `ReadWriteOnce`, `ReadWriteMany` (via share manager)           |
+| Survives node loss | Yes — if replica count > 1 and replicas are on different nodes |
+| UI                 | Web UI at `longhorn.example.com` (ingress configured)          |
 
 **Use this for:** any stateful workload in production — databases, message queues, object stores.
 
@@ -105,14 +105,14 @@ bash kubernetes/k3s/helm/set-default-storageclass.sh
 
 Full software-defined storage cluster. Rook is the Kubernetes operator; Ceph is the distributed storage system underneath. Provides block, filesystem, and object storage from a pool of raw disks.
 
-|                      |                                                              |
-| -------------------- | ------------------------------------------------------------ |
-| Location in repo     | `kubernetes/temp/rook-ceph/`                                |
-| Overhead             | High — Ceph requires dedicated nodes and significant RAM     |
-| Replication          | 3-way by default                                            |
-| Access modes         | Block (`RWO`), filesystem (`RWX`), object (S3-compatible)   |
-| Min nodes            | 3 nodes with dedicated raw disks                            |
-| Maturity             | Production-grade but operationally complex                  |
+|                  |                                                           |
+| ---------------- | --------------------------------------------------------- |
+| Location in repo | `kubernetes/temp/rook-ceph/`                              |
+| Overhead         | High — Ceph requires dedicated nodes and significant RAM  |
+| Replication      | 3-way by default                                          |
+| Access modes     | Block (`RWO`), filesystem (`RWX`), object (S3-compatible) |
+| Min nodes        | 3 nodes with dedicated raw disks                          |
+| Maturity         | Production-grade but operationally complex                |
 
 **When to choose:** you have 3+ nodes with dedicated raw disks and need `ReadWriteMany` volumes or S3-compatible object storage without an external service.
 
@@ -122,17 +122,17 @@ Full software-defined storage cluster. Rook is the Kubernetes operator; Ceph is 
 
 ## Comparison
 
-|                    | local-path         | Longhorn                  | Rook-Ceph                    |
-| ------------------ | ------------------ | ------------------------- | ---------------------------- |
-| Built into k3s     | Yes                | No (Helm install)         | No (Helm install)            |
-| Replication        | None               | Yes (configurable)        | Yes (3-way default)          |
-| Survives node loss | No                 | Yes (replicas > 1)        | Yes                          |
-| Snapshots          | No                 | Yes                       | Yes                          |
-| S3 object storage  | No                 | No                        | Yes                          |
-| ReadWriteMany      | No                 | Via share manager         | Yes (CephFS)                 |
-| RAM per node       | Negligible         | ~300 MB                   | ~1–2 GB                      |
-| Operational cost   | None               | Low                       | High                         |
-| Best for           | Dev / ephemeral    | Production stateful apps  | Large-scale or multi-protocol |
+|                    | local-path      | Longhorn                 | Rook-Ceph                     |
+| ------------------ | --------------- | ------------------------ | ----------------------------- |
+| Built into k3s     | Yes             | No (Helm install)        | No (Helm install)             |
+| Replication        | None            | Yes (configurable)       | Yes (3-way default)           |
+| Survives node loss | No              | Yes (replicas > 1)       | Yes                           |
+| Snapshots          | No              | Yes                      | Yes                           |
+| S3 object storage  | No              | No                       | Yes                           |
+| ReadWriteMany      | No              | Via share manager        | Yes (CephFS)                  |
+| RAM per node       | Negligible      | ~300 MB                  | ~1–2 GB                       |
+| Operational cost   | None            | Low                      | High                          |
+| Best for           | Dev / ephemeral | Production stateful apps | Large-scale or multi-protocol |
 
 ---
 
@@ -142,11 +142,11 @@ The `defaultReplicaCount` in `helm-charts/longhorn/helm-values.yaml` is set to `
 
 Change this based on your cluster size:
 
-| Node count with storage | Recommended replicas | Tolerates |
-|------------------------|---------------------|-----------|
-| 1 | 1 | Cannot tolerate any node loss |
-| 2 | 2 | 1 node loss |
-| 3+ | 3 | 1 node loss (Longhorn default recommendation) |
+| Node count with storage | Recommended replicas | Tolerates                                     |
+| ----------------------- | -------------------- | --------------------------------------------- |
+| 1                       | 1                    | Cannot tolerate any node loss                 |
+| 2                       | 2                    | 1 node loss                                   |
+| 3+                      | 3                    | 1 node loss (Longhorn default recommendation) |
 
 ```bash
 # Check current default replica count
@@ -165,10 +165,10 @@ kubectl patch setting default-replica-count \
 
 ## Access modes
 
-| Mode | Meaning | Supported by |
-|------|---------|-------------|
-| `ReadWriteOnce` (RWO) | One node can mount read-write | local-path, Longhorn, Rook-Ceph |
-| `ReadOnlyMany` (ROX) | Multiple nodes can mount read-only | Longhorn, Rook-Ceph |
+| Mode                  | Meaning                             | Supported by                               |
+| --------------------- | ----------------------------------- | ------------------------------------------ |
+| `ReadWriteOnce` (RWO) | One node can mount read-write       | local-path, Longhorn, Rook-Ceph            |
+| `ReadOnlyMany` (ROX)  | Multiple nodes can mount read-only  | Longhorn, Rook-Ceph                        |
 | `ReadWriteMany` (RWX) | Multiple nodes can mount read-write | Longhorn (share manager), Rook-Ceph CephFS |
 
 > Most stateful applications (PostgreSQL, Kafka, Elasticsearch) use `ReadWriteOnce` — only one pod writes to the volume at a time. `ReadWriteMany` is needed when multiple pods on different nodes must write to the same volume simultaneously (e.g. a shared config directory or NFS-style workload).
@@ -208,12 +208,12 @@ kubectl get pv <pv-name> -o jsonpath='{.spec.nodeAffinity}'
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| Pod stuck `Pending` — `no storage class found` | No default StorageClass set | Run `set-default-storageclass.sh` or specify `storageClassName` in the PVC |
-| Pod stuck `Pending` — `waiting for volume to be created` | Longhorn cannot place replicas | Check replica count vs available storage nodes: `kubectl get nodes -n storage-controller` |
-| PVC stuck `Pending` after Longhorn install | Longhorn pods not fully ready | `kubectl get pods -n storage-controller` — wait for all Running |
-| Volume degraded after node drain | Replica on drained node is unavailable | Longhorn will rebuild replica on another node automatically — check progress in UI |
-| local-path PVC data missing after pod reschedule | Pod rescheduled to different node | local-path data is node-local — migrate to Longhorn, see `docs/migrate-to-longhorn.md` |
-| Longhorn UI returns 401 | Basic-auth secret not created | Re-run `helm/longhorn/install.sh` — it creates the secret interactively |
-| `storageclass.kubernetes.io/is-default-class` on both classes | Both local-path and longhorn marked default | Run `set-default-storageclass.sh` to fix, or patch manually |
+| Symptom                                                       | Likely cause                                | Fix                                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Pod stuck `Pending` — `no storage class found`                | No default StorageClass set                 | Run `set-default-storageclass.sh` or specify `storageClassName` in the PVC                |
+| Pod stuck `Pending` — `waiting for volume to be created`      | Longhorn cannot place replicas              | Check replica count vs available storage nodes: `kubectl get nodes -n storage-controller` |
+| PVC stuck `Pending` after Longhorn install                    | Longhorn pods not fully ready               | `kubectl get pods -n storage-controller` — wait for all Running                           |
+| Volume degraded after node drain                              | Replica on drained node is unavailable      | Longhorn will rebuild replica on another node automatically — check progress in UI        |
+| local-path PVC data missing after pod reschedule              | Pod rescheduled to different node           | local-path data is node-local — migrate to Longhorn, see `docs/migrate-to-longhorn.md`    |
+| Longhorn UI returns 401                                       | Basic-auth secret not created               | Re-run `helm/longhorn/install.sh` — it creates the secret interactively                   |
+| `storageclass.kubernetes.io/is-default-class` on both classes | Both local-path and longhorn marked default | Run `set-default-storageclass.sh` to fix, or patch manually                               |

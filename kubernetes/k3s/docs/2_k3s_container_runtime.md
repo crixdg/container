@@ -44,15 +44,16 @@ container (running process)   ← your application
 >
 > The `restartPolicy` on the Pod (`Always`, `OnFailure`, `Never`) controls whether a crashed container is restarted, but it applies per container, not per Pod.
 >
-> | Scenario | Result |
-> |----------|--------|
+> | Scenario                             | Result                                   |
+> | ------------------------------------ | ---------------------------------------- |
 > | Sidecar crashes, main app is healthy | Sidecar restarts; main app keeps running |
 > | Main app crashes, sidecar is healthy | Main app restarts; sidecar keeps running |
-> | Both crash | Both restart independently |
+> | Both crash                           | Both restart independently               |
 >
 > The Pod is only removed and rescheduled if the node itself fails, or if a container keeps crashing and hits the backoff limit (`CrashLoopBackOff`).
 >
 > To see the restart count of each container in a Pod:
+>
 > ```bash
 > kubectl get pod <pod-name> -o jsonpath='{.status.containerStatuses[*].name} {.status.containerStatuses[*].restartCount}'
 > ```
@@ -65,13 +66,13 @@ A container runtime is the low-level component that pulls images and starts/stop
 
 Every major managed Kubernetes service defaults to containerd:
 
-| Platform | Default runtime |
-|----------|----------------|
-| GKE (Google) | containerd |
-| EKS (AWS) | containerd |
-| AKS (Azure) | containerd |
-| k3s | containerd (bundled) |
-| kubeadm (bare metal) | containerd |
+| Platform             | Default runtime      |
+| -------------------- | -------------------- |
+| GKE (Google)         | containerd           |
+| EKS (AWS)            | containerd           |
+| AKS (Azure)          | containerd           |
+| k3s                  | containerd (bundled) |
+| kubeadm (bare metal) | containerd           |
 
 > CRI-O is used in OpenShift (Red Hat's enterprise Kubernetes distribution) and in hardened government/defence environments where the smaller attack surface is a compliance requirement.
 > For everything else — including this k3s setup — containerd is the correct choice.

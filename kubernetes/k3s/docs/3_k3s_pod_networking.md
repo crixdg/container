@@ -24,12 +24,12 @@ Node 1 network interface          Node 2 network interface
 
 > **CNI vs kube-proxy — what each one does:**
 >
-> | | CNI (Flannel) | kube-proxy |
-> |-|---------------|------------|
-> | Assigns Pod IP | Yes | No |
-> | Connects Pods across nodes | Yes | No |
-> | Handles ClusterIP (Service) routing | No | Yes |
-> | Handles NodePort / LoadBalancer routing | No | Yes |
+> |                                         | CNI (Flannel) | kube-proxy |
+> | --------------------------------------- | ------------- | ---------- |
+> | Assigns Pod IP                          | Yes           | No         |
+> | Connects Pods across nodes              | Yes           | No         |
+> | Handles ClusterIP (Service) routing     | No            | Yes        |
+> | Handles NodePort / LoadBalancer routing | No            | Yes        |
 >
 > CNI owns **Pod-to-Pod** networking — it gives each Pod an IP and builds the tunnels between nodes.
 > kube-proxy owns **Pod-to-Service** networking — it watches for Services and writes iptables rules so that traffic to a ClusterIP gets forwarded to the correct Pod IP.
@@ -62,6 +62,7 @@ Physical NIC (Node 1)                    Physical NIC (Node 2)
 ```
 
 > **Step by step:**
+>
 > 1. Pod A sends a packet to `ClusterIP 10.43.0.5` (the Service IP)
 > 2. kube-proxy's iptables rule intercepts it and rewrites the destination to the real Pod IP `10.42.1.20`
 > 3. Flannel sees the destination is on a different node and wraps the packet in a VXLAN tunnel
@@ -75,14 +76,18 @@ Physical NIC (Node 1)                    Physical NIC (Node 2)
 > kube-proxy does not figure this out by itself — it watches the API server for **EndpointSlice** objects.
 >
 > When you create a Service, Kubernetes automatically creates an EndpointSlice that lists the real Pod IPs backing that Service, regardless of which node those pods are on:
+>
 > ```
 > Service:        my-service  →  ClusterIP 10.43.0.5
 > EndpointSlice:  my-service  →  [10.42.1.20]          ← Pod B's real IP
 > ```
+>
 > kube-proxy on **every node** watches the API server and receives this EndpointSlice. It then writes an iptables rule locally on each node:
+>
 > ```
 > packet to 10.43.0.5  →  rewrite destination to 10.42.1.20
 > ```
+>
 > kube-proxy does not know or care which node `10.42.1.20` lives on — that is Flannel's job. It only knows "this Service maps to this Pod IP" because the API server told it so.
 >
 > This is why the same rule exists on Node 1, Node 2, and every other node — any pod in the cluster can reach the Service, and the local kube-proxy handles the rewrite before Flannel routes it to the correct node.
@@ -90,17 +95,21 @@ Physical NIC (Node 1)                    Physical NIC (Node 2)
 > **How does Flannel know `10.42.1.20` belongs to Node 2?**
 >
 > When k3s starts, it assigns each node a unique slice of the Pod CIDR:
+>
 > ```
 > Node 1  →  10.42.0.0/24   (pods get IPs from .0.1 to .0.254)
 > Node 2  →  10.42.1.0/24   (pods get IPs from .1.1 to .1.254)
 > Node 3  →  10.42.2.0/24   (pods get IPs from .2.1 to .2.254)
 > ```
+>
 > Flannel stores this mapping in etcd and programs a kernel routing table on every node:
+>
 > ```
 > 10.42.0.0/24  →  local (this node)
 > 10.42.1.0/24  →  tunnel to 192.168.1.101  (Node 2's real LAN IP)
 > 10.42.2.0/24  →  tunnel to 192.168.1.102  (Node 3's real LAN IP)
 > ```
+>
 > When the packet destination is `10.42.1.20`, the kernel matches the `10.42.1.0/24` route, hands it to Flannel's VXLAN interface, which wraps it in a UDP packet addressed to `192.168.1.101` (Node 2's real IP) and sends it over the LAN.
 > Node 2's Flannel receives the UDP packet, unwraps it, and the inner packet with destination `10.42.1.20` is delivered locally to Pod B.
 >
@@ -140,10 +149,10 @@ Pod A  ──────────────────────►  Po
 
 A NetworkPolicy targets pods by label and controls:
 
-| Direction | What it controls |
-|-----------|-----------------|
+| Direction | What it controls                              |
+| --------- | --------------------------------------------- |
 | `ingress` | Who is allowed to send traffic **into** a pod |
-| `egress` | Where a pod is allowed to **send** traffic to |
+| `egress`  | Where a pod is allowed to **send** traffic to |
 
 Example — only allow frontend pods to reach the database pod on port 5432, deny everything else:
 
@@ -156,12 +165,12 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      role: database          # this policy applies to the db pod
+      role: database # this policy applies to the db pod
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              role: frontend  # only frontend pods can connect
+              role: frontend # only frontend pods can connect
       ports:
         - port: 5432
 ```
@@ -169,11 +178,11 @@ spec:
 > **With Flannel (default k3s CNI):** the above object is saved to etcd but completely ignored — any pod can still reach the database.
 > **With Cilium or Calico:** the packet from any non-frontend pod to port 5432 is dropped at the kernel level before it ever reaches the database pod.
 
-| CNI | Enforces NetworkPolicy | Level |
-|-----|----------------------|-------|
-| Flannel | No | — |
-| Calico | Yes | L3 / L4 (IP, port, protocol) |
-| Cilium | Yes | L3 / L4 + L7 (HTTP path, method, headers) |
+| CNI     | Enforces NetworkPolicy | Level                                     |
+| ------- | ---------------------- | ----------------------------------------- |
+| Flannel | No                     | —                                         |
+| Calico  | Yes                    | L3 / L4 (IP, port, protocol)              |
+| Cilium  | Yes                    | L3 / L4 + L7 (HTTP path, method, headers) |
 
 > L7 enforcement means Cilium can allow `GET /api` but deny `DELETE /api` on the same port — something iptables-based solutions cannot do.
 
@@ -206,12 +215,12 @@ Simple, stable, low overhead. Uses VXLAN to create an overlay network between no
 >
 > Without WireGuard, Flannel's VXLAN traffic is unencrypted. Anyone on the same network segment can sniff pod-to-pod traffic.
 >
-> | | Without WireGuard | With WireGuard |
-> |-|-------------------|----------------|
-> | Pod-to-pod traffic | Plaintext over LAN | Encrypted between nodes |
-> | CPU overhead | None | Small (~5% on modern CPUs) |
-> | Key management | None needed | Automatic (k3s handles it) |
-> | Kernel requirement | Any | Linux 5.6+ (Ubuntu 20.04+) |
+> |                    | Without WireGuard  | With WireGuard             |
+> | ------------------ | ------------------ | -------------------------- |
+> | Pod-to-pod traffic | Plaintext over LAN | Encrypted between nodes    |
+> | CPU overhead       | None               | Small (~5% on modern CPUs) |
+> | Key management     | None needed        | Automatic (k3s handles it) |
+> | Kernel requirement | Any                | Linux 5.6+ (Ubuntu 20.04+) |
 >
 > On a single node WireGuard has no effect — there are no cross-node tunnels to encrypt.
 

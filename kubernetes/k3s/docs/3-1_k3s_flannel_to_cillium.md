@@ -125,11 +125,11 @@ kubectl uncordon <node-name>
 >
 > When you drain a node (`kubectl drain`), Kubernetes evicts all pods from that node and reschedules them onto other nodes before you touch anything. So at the moment k3s restarts:
 >
-> | Pod location | What happens |
-> |-------------|--------------|
-> | Pods on the node being migrated | Evicted and rescheduled to other nodes by `kubectl drain` |
-> | Pods on other nodes | Unaffected — still running normally |
-> | DaemonSet pods | Not evicted (`--ignore-daemonsets`) — they restart with k3s and wait for Cilium |
+> | Pod location                    | What happens                                                                    |
+> | ------------------------------- | ------------------------------------------------------------------------------- |
+> | Pods on the node being migrated | Evicted and rescheduled to other nodes by `kubectl drain`                       |
+> | Pods on other nodes             | Unaffected — still running normally                                             |
+> | DaemonSet pods                  | Not evicted (`--ignore-daemonsets`) — they restart with k3s and wait for Cilium |
 >
 > **The network gap:** after k3s restarts on the migrated node, it has no CNI. Any pod rescheduled back onto this node will stay `Pending` until Cilium is installed in Phase 2. Kubernetes will not schedule new pods here during this window.
 >
@@ -162,16 +162,18 @@ kubectl uncordon <node-name>
 > ```
 >
 > The gap happens because:
+>
 > 1. Kubernetes waits for the pod to be fully terminated before starting a new one
 > 2. The new pod must be pulled, started, and pass health checks on the other node
 >
-> | Replica count | What the user sees |
-> |--------------|-------------------|
-> | 1 replica | ~30–60s downtime while pod reschedules |
-> | 2+ replicas on different nodes | No downtime — one replica keeps serving |
-> | 2 replicas on the SAME node | Same as 1 replica — both evicted together |
+> | Replica count                  | What the user sees                        |
+> | ------------------------------ | ----------------------------------------- |
+> | 1 replica                      | ~30–60s downtime while pod reschedules    |
+> | 2+ replicas on different nodes | No downtime — one replica keeps serving   |
+> | 2 replicas on the SAME node    | Same as 1 replica — both evicted together |
 >
 > > **Important:** 2 replicas only helps if they are on **different nodes**. Use a `podAntiAffinity` rule to guarantee this:
+> >
 > > ```yaml
 > > spec:
 > >   affinity:
@@ -182,6 +184,7 @@ kubectl uncordon <node-name>
 > >               app: <your-app>
 > >           topologyKey: kubernetes.io/hostname
 > > ```
+> >
 > > This forces Kubernetes to never schedule two replicas of the same app on the same node.
 
 > At this point the node is running without any CNI — pods will be in `Pending` state until Cilium is installed in Phase 2. This is expected.
@@ -227,14 +230,14 @@ Services:
 
 > **Key point:** pods that were already running before Phase 1 keep their Flannel-assigned IPs and interfaces. They do not crash immediately. But cross-node traffic fails because Flannel's VXLAN tunnels are gone. Any pod-to-pod call that crosses a node boundary will time out.
 
-| Situation | During Phase 2 gap |
-|-----------|-------------------|
-| Same-node pod-to-pod traffic | Works |
-| Cross-node pod-to-pod traffic | Broken |
-| New or rescheduled pods | Stuck `Pending` |
-| ClusterIP Services (same node) | Works |
-| ClusterIP Services (cross node) | Broken |
-| External ingress traffic | Depends — broken if backend pod is on a different node than ingress |
+| Situation                       | During Phase 2 gap                                                  |
+| ------------------------------- | ------------------------------------------------------------------- |
+| Same-node pod-to-pod traffic    | Works                                                               |
+| Cross-node pod-to-pod traffic   | Broken                                                              |
+| New or rescheduled pods         | Stuck `Pending`                                                     |
+| ClusterIP Services (same node)  | Works                                                               |
+| ClusterIP Services (cross node) | Broken                                                              |
+| External ingress traffic        | Depends — broken if backend pod is on a different node than ingress |
 
 > **Minimize this window** — run Phase 2 immediately after Phase 1 completes. The gap should be under 5 minutes. Do not take a break between phases.
 
@@ -344,13 +347,13 @@ systemctl restart k3s-agent  # agent
 
 Two options depending on whether downtime is acceptable:
 
-| | Maintenance window | Blue-green (zero downtime) |
-|-|-------------------|---------------------------|
-| Downtime | ~5 minutes | None |
-| Complexity | Low | High |
-| Extra cost | None | Double infrastructure temporarily |
-| Risk | Rollback is fast | Rollback means switching DNS back |
-| Best for | Off-peak clusters | SLA-critical production |
+|            | Maintenance window | Blue-green (zero downtime)        |
+| ---------- | ------------------ | --------------------------------- |
+| Downtime   | ~5 minutes         | None                              |
+| Complexity | Low                | High                              |
+| Extra cost | None               | Double infrastructure temporarily |
+| Risk       | Rollback is fast   | Rollback means switching DNS back |
+| Best for   | Off-peak clusters  | SLA-critical production           |
 
 ---
 
@@ -385,6 +388,7 @@ kubectl get deployments -A \
 Pick an off-peak window of **30 minutes**. 5 minutes is the expected duration — the extra time is buffer for unexpected issues.
 
 Notify users:
+
 ```
 Maintenance window: <date> <time> — <time+30min>
 Impact: application unavailability up to 5 minutes
@@ -538,10 +542,10 @@ Takes effect in:  60s (if TTL was lowered in Step 4)
 
 ## Troubleshooting
 
-| Symptom | Check |
-|---------|-------|
-| Cilium pods stuck in `Init` | `kubectl describe pod -n kube-system <cilium-pod>` — usually a kernel version issue |
-| Pods `Pending` after Cilium installed | `kubectl get events -A` — CNI config not picked up; delete and recreate the pod |
-| Cross-node traffic fails | Confirm Flannel interfaces are removed on all nodes: `ip link show flannel.1` |
-| DNS broken | Restart CoreDNS: `kubectl rollout restart deployment/coredns -n kube-system` |
-| NetworkPolicy not enforced | Confirm `--disable-network-policy` is set in k3s config and Cilium is in `kube-system` |
+| Symptom                               | Check                                                                                  |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| Cilium pods stuck in `Init`           | `kubectl describe pod -n kube-system <cilium-pod>` — usually a kernel version issue    |
+| Pods `Pending` after Cilium installed | `kubectl get events -A` — CNI config not picked up; delete and recreate the pod        |
+| Cross-node traffic fails              | Confirm Flannel interfaces are removed on all nodes: `ip link show flannel.1`          |
+| DNS broken                            | Restart CoreDNS: `kubectl rollout restart deployment/coredns -n kube-system`           |
+| NetworkPolicy not enforced            | Confirm `--disable-network-policy` is set in k3s config and Cilium is in `kube-system` |
