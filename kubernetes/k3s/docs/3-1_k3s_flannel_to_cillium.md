@@ -1,0 +1,351 @@
+# Migrate Flannel to Cilium
+
+Flannel is embedded in the k3s binary and cannot be hot-swapped on a running cluster. Every node must have k3s restarted with Flannel disabled before Cilium takes over. This causes a **brief pod network outage per node** — plan for a maintenance window.
+
+---
+
+## Before you start
+
+- [ ] Cluster is healthy: `kubectl get nodes` — all nodes `Ready`
+- [ ] All workloads are running: `kubectl get pods -A` — no `Pending` or `CrashLoopBackOff`
+- [ ] etcd snapshot taken: `k3s etcd-snapshot save --name pre-cilium-migration`
+- [ ] You have SSH access to all nodes
+- [ ] Linux kernel 5.4+ on all nodes (required by Cilium): `uname -r`
+- [ ] Helm is installed on your workstation
+
+> **Downtime scope:** pod-to-pod networking on each node is interrupted for ~2 minutes while k3s restarts. Nodes are migrated one at a time — other nodes stay up.
+
+---
+
+## How it works
+
+```
+Before                          After
+──────────────────────          ──────────────────────
+k3s (Flannel built-in)          k3s (Flannel disabled)
+    │                               │
+    ▼                               ▼
+Flannel DaemonSet               Cilium DaemonSet
+VXLAN overlay                   eBPF overlay
+No NetworkPolicy                Full NetworkPolicy (L3–L7)
+```
+
+The migration has three phases:
+
+```
+Phase 1 — Disable Flannel on all nodes (one at a time)
+Phase 2 — Install Cilium
+Phase 3 — Verify and clean up
+```
+
+---
+
+## Phase 1 — Disable Flannel on all nodes
+
+Repeat the steps below for **each node**, starting with agent nodes and finishing with server nodes. Never migrate all nodes at once — keep the cluster reachable.
+
+### 1a — Drain the node
+
+```bash
+# Run from your workstation
+kubectl drain <node-name> \
+  --ignore-daemonsets \
+  --delete-emptydir-data \
+  --timeout=120s
+```
+
+### 1b — SSH into the node and stop k3s
+
+```bash
+# On server nodes
+systemctl stop k3s
+
+# On agent nodes
+systemctl stop k3s-agent
+```
+
+### 1c — Update the k3s config to disable Flannel
+
+```bash
+# Edit /etc/rancher/k3s/config.yaml on the node
+# Add or update the following lines:
+
+flannel-backend: none
+disable-network-policy: true
+```
+
+For server nodes, also ensure `disable` includes `local-storage` is not accidentally re-enabled. Your config should look like:
+
+```yaml
+# /etc/rancher/k3s/config.yaml (server node)
+flannel-backend: none
+disable-network-policy: true
+disable:
+  - traefik
+  - servicelb
+```
+
+### 1d — Clean up Flannel network interfaces
+
+Flannel leaves virtual interfaces and iptables rules behind. Remove them before restarting k3s:
+
+```bash
+# Remove Flannel interface
+ip link delete flannel.1 2>/dev/null || true
+ip link delete cni0 2>/dev/null || true
+
+# Flush Flannel iptables rules
+iptables -F
+iptables -t nat -F
+iptables -t mangle -F
+iptables -X
+
+# Remove CNI config
+rm -f /etc/cni/net.d/10-flannel.conflist
+rm -f /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist
+```
+
+### 1e — Restart k3s
+
+```bash
+# On server nodes
+systemctl start k3s
+
+# On agent nodes
+systemctl start k3s-agent
+```
+
+### 1f — Uncordon the node
+
+```bash
+kubectl uncordon <node-name>
+```
+
+> **What happens to running applications during Phase 1:**
+>
+> When you drain a node (`kubectl drain`), Kubernetes evicts all pods from that node and reschedules them onto other nodes before you touch anything. So at the moment k3s restarts:
+>
+> | Pod location | What happens |
+> |-------------|--------------|
+> | Pods on the node being migrated | Evicted and rescheduled to other nodes by `kubectl drain` |
+> | Pods on other nodes | Unaffected — still running normally |
+> | DaemonSet pods | Not evicted (`--ignore-daemonsets`) — they restart with k3s and wait for Cilium |
+>
+> **The network gap:** after k3s restarts on the migrated node, it has no CNI. Any pod rescheduled back onto this node will stay `Pending` until Cilium is installed in Phase 2. Kubernetes will not schedule new pods here during this window.
+>
+> **For your application to survive drain**, it must have more than one replica running on different nodes. A single-replica Deployment will go down for the duration of the node migration.
+>
+> ```bash
+> # Check replica count before draining
+> kubectl get deployments -A
+>
+> # Scale up to 2+ replicas if needed
+> kubectl scale deployment <name> -n <namespace> --replicas=2
+> ```
+
+> **What happens if you only have 1 replica during Phase 1:**
+>
+> ```
+> Timeline
+> ────────────────────────────────────────────────────────────
+> kubectl drain <node>
+>   → Pod evicted from node                 ← pod is DELETED
+>   → Kubernetes schedules it on another node
+>   → Pod starts on other node              ← pod is back up
+>   → k3s restarts, Flannel removed
+>   → Node has no CNI
+>   → Any new pod scheduled here → Pending
+>
+> At this point your single replica is running on another node.
+> Application is UP but with a gap of ~30–60s during reschedule.
+> ────────────────────────────────────────────────────────────
+> ```
+>
+> The gap happens because:
+> 1. Kubernetes waits for the pod to be fully terminated before starting a new one
+> 2. The new pod must be pulled, started, and pass health checks on the other node
+>
+> | Replica count | What the user sees |
+> |--------------|-------------------|
+> | 1 replica | ~30–60s downtime while pod reschedules |
+> | 2+ replicas on different nodes | No downtime — one replica keeps serving |
+> | 2 replicas on the SAME node | Same as 1 replica — both evicted together |
+>
+> > **Important:** 2 replicas only helps if they are on **different nodes**. Use a `podAntiAffinity` rule to guarantee this:
+> > ```yaml
+> > spec:
+> >   affinity:
+> >     podAntiAffinity:
+> >       requiredDuringSchedulingIgnoredDuringExecution:
+> >         - labelSelector:
+> >             matchLabels:
+> >               app: <your-app>
+> >           topologyKey: kubernetes.io/hostname
+> > ```
+> > This forces Kubernetes to never schedule two replicas of the same app on the same node.
+
+> At this point the node is running without any CNI — pods will be in `Pending` state until Cilium is installed in Phase 2. This is expected.
+
+### 1g — Repeat for all remaining nodes
+
+Work through agent nodes first, then server nodes. Verify each node rejoins before moving to the next:
+
+```bash
+kubectl get nodes   # node should return to Ready (NotReady is also ok — CNI is missing)
+```
+
+---
+
+## Phase 2 — Install Cilium
+
+**What happens to applications between Phase 1 and Phase 2:**
+
+Once Flannel is disabled on the last node, the cluster has no CNI on any node. This is the most critical window in the migration.
+
+```
+All nodes — no CNI
+────────────────────────────────────────────────────────────────────
+Node 1          Node 2          Node 3
+──────────      ──────────      ──────────
+k3s running     k3s running     k3s running
+Flannel: gone   Flannel: gone   Flannel: gone
+Cilium: not yet Cilium: not yet Cilium: not yet
+
+Existing running pods:
+  → Still running — their network interfaces were created by
+    Flannel and are still active inside the pod's namespace.
+    Traffic between pods on the SAME node still works.
+    Traffic between pods on DIFFERENT nodes is BROKEN.
+
+New pods or rescheduled pods:
+  → Stuck in Pending — no CNI to assign them an IP.
+
+Services:
+  → ClusterIP routing still works via kube-proxy iptables rules,
+    but only if the destination pod is still running.
+```
+
+> **Key point:** pods that were already running before Phase 1 keep their Flannel-assigned IPs and interfaces. They do not crash immediately. But cross-node traffic fails because Flannel's VXLAN tunnels are gone. Any pod-to-pod call that crosses a node boundary will time out.
+
+| Situation | During Phase 2 gap |
+|-----------|-------------------|
+| Same-node pod-to-pod traffic | Works |
+| Cross-node pod-to-pod traffic | Broken |
+| New or rescheduled pods | Stuck `Pending` |
+| ClusterIP Services (same node) | Works |
+| ClusterIP Services (cross node) | Broken |
+| External ingress traffic | Depends — broken if backend pod is on a different node than ingress |
+
+> **Minimize this window** — run Phase 2 immediately after Phase 1 completes. The gap should be under 5 minutes. Do not take a break between phases.
+
+Run from your workstation once **all nodes** have Flannel disabled.
+
+### 2a — Add the Helm repo
+
+```bash
+helm repo add cilium https://helm.cilium.io
+helm repo update cilium
+```
+
+### 2b — Install Cilium
+
+```bash
+helm install cilium cilium/cilium \
+  --version 1.17.0 \
+  -f kubernetes/essential/cilium/values.yaml \
+  -n kube-system \
+  --wait --timeout 5m
+```
+
+> Cilium is installed into `kube-system` rather than a separate namespace because it needs access to the host network and kernel — the same namespace as kube-proxy and CoreDNS.
+
+### 2c — Wait for Cilium pods to be Ready
+
+```bash
+kubectl -n kube-system rollout status daemonset/cilium
+kubectl get pods -n kube-system -l k8s-app=cilium
+# All pods should show Running
+```
+
+---
+
+## Phase 3 — Verify
+
+### Check all nodes have a Cilium agent
+
+```bash
+kubectl get pods -n kube-system -l k8s-app=cilium -o wide
+# One pod per node, all Running
+```
+
+### Check pod-to-pod connectivity
+
+```bash
+# Run a temporary pod and curl another pod's IP directly
+kubectl run test --image=alpine --rm -it --restart=Never -- \
+  wget -qO- http://<pod-ip>:<port>
+```
+
+### Check NetworkPolicy is enforced
+
+```bash
+# Cilium CLI (optional — install from https://github.com/cilium/cilium-cli)
+cilium connectivity test
+```
+
+### Check cluster DNS
+
+```bash
+kubectl run test --image=alpine --rm -it --restart=Never -- \
+  nslookup kubernetes.default.svc.cluster.local
+```
+
+### Restart all workload pods
+
+Pods that were running during the migration may still have stale Flannel network interfaces. Rolling restart forces them to get a fresh Cilium-managed interface:
+
+```bash
+# Restart all deployments
+kubectl get deployments -A \
+  -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name \
+  --no-headers | while read ns name; do
+    kubectl rollout restart deployment "$name" -n "$ns"
+  done
+
+# Restart all statefulsets
+kubectl get statefulsets -A \
+  -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name \
+  --no-headers | while read ns name; do
+    kubectl rollout restart statefulset "$name" -n "$ns"
+  done
+```
+
+---
+
+## Rollback
+
+If Cilium fails to come up and you need to revert to Flannel:
+
+```bash
+# 1. Uninstall Cilium
+helm uninstall cilium -n kube-system
+
+# 2. On each node — remove flannel-backend: none from config.yaml
+#    and restart k3s
+systemctl restart k3s        # server
+systemctl restart k3s-agent  # agent
+
+# 3. Flannel will recreate its interface and CNI config automatically
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|-------|
+| Cilium pods stuck in `Init` | `kubectl describe pod -n kube-system <cilium-pod>` — usually a kernel version issue |
+| Pods `Pending` after Cilium installed | `kubectl get events -A` — CNI config not picked up; delete and recreate the pod |
+| Cross-node traffic fails | Confirm Flannel interfaces are removed on all nodes: `ip link show flannel.1` |
+| DNS broken | Restart CoreDNS: `kubectl rollout restart deployment/coredns -n kube-system` |
+| NetworkPolicy not enforced | Confirm `--disable-network-policy` is set in k3s config and Cilium is in `kube-system` |
