@@ -1,0 +1,17 @@
+---
+# Master playbook — runs the full provisioning sequence.
+#
+# Usage:
+#   ansible-playbook -i kubernetes/k3s/ansible/inventory/hosts.ini \
+#                    kubernetes/k3s/ansible/playbook/site.yml
+#
+# To run individual steps:
+#   ansible-playbook ... preflight.yml
+#   ansible-playbook ... firewall.yml
+#   ansible-playbook ... install-servers.yml
+#   ansible-playbook ... install-agents.yml
+
+- import_playbook: preflight.yml
+- import_playbook: firewall.yml
+- import_playbook: install-servers.yml
+- import_playbook: install-agents.yml

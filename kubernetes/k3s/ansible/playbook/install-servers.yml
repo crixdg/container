@@ -1,0 +1,194 @@
+---
+# Install k3s server nodes.
+# The first host in [k3s_servers] bootstraps the cluster with --cluster-init.
+# All remaining server hosts join using --server https://<first-server>:6443.
+
+# ------- First server (cluster-init) ------------------------------------------
+
+- name: Bootstrap first k3s server
+  hosts: k3s_servers[0]
+  become: true
+  gather_facts: false
+
+  vars_files:
+    - ../../.env
+
+  vars:
+    first_server_ip:        "{{ FIRST_SERVER_IP }}"
+    k3s_version:            "{{ K3S_VERSION | default('') }}"
+    cluster_cidr:           "{{ CLUSTER_CIDR | default('10.42.0.0/16') }}"
+    service_cidr:           "{{ SERVICE_CIDR | default('10.43.0.0/16') }}"
+    extra_sans:             "{{ EXTRA_SANS | default('') }}"
+    data_dir:               "{{ DATA_DIR | default('/var/lib/rancher/k3s') }}"
+    snapshot_cron:          "{{ ETCD_SNAPSHOT_SCHEDULE_CRON | default('0 */6 * * *') }}"
+    snapshot_retention:     "{{ ETCD_SNAPSHOT_RETENTION | default('5') }}"
+    secrets_encryption:     "{{ SECRETS_ENCRYPTION | default('true') }}"
+    eviction_hard_memory:   "{{ EVICTION_HARD_MEMORY | default('200Mi') }}"
+    eviction_soft_memory:   "{{ EVICTION_SOFT_MEMORY | default('300Mi') }}"
+    eviction_soft_grace:    "{{ EVICTION_SOFT_GRACE | default('30s') }}"
+    disable_local_storage:  "{{ DISABLE_LOCAL_STORAGE | default('false') }}"
+
+  tasks:
+
+    - name: Write k3s config file
+      copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: '0600'
+        content: |
+          cluster-init: true
+          node-ip: "{{ first_server_ip }}"
+          cluster-cidr: "{{ cluster_cidr }}"
+          service-cidr: "{{ service_cidr }}"
+          data-dir: "{{ data_dir }}"
+
+          tls-san:
+            - "{{ first_server_ip }}"
+            {% if extra_sans %}
+            {% for san in extra_sans.split(',') %}
+            - "{{ san | trim }}"
+            {% endfor %}
+            {% endif %}
+
+          disable:
+            - traefik
+            - servicelb
+            {% if disable_local_storage == 'true' %}
+            - local-storage
+            {% endif %}
+
+          secrets-encryption: {{ secrets_encryption | lower }}
+
+          etcd-snapshot-schedule-cron: "{{ snapshot_cron }}"
+          etcd-snapshot-retention: {{ snapshot_retention }}
+          etcd-expose-metrics: true
+
+          kube-apiserver-arg:
+            - "audit-log-path={{ data_dir }}/server/logs/audit.log"
+            - "audit-log-maxage=7"
+            - "audit-log-maxbackup=3"
+            - "audit-log-maxsize=100"
+
+          kubelet-arg:
+            - "eviction-hard=memory.available<{{ eviction_hard_memory }}"
+            - "eviction-soft=memory.available<{{ eviction_soft_memory }}"
+            - "eviction-soft-grace-period=memory.available={{ eviction_soft_grace }}"
+            - "max-pods=110"
+
+    - name: Create audit log directory
+      file:
+        path: "{{ data_dir }}/server/logs"
+        state: directory
+        mode: '0700'
+
+    - name: Install k3s (first server)
+      environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+        INSTALL_K3S_SKIP_START: "false"
+      shell: curl -sfL https://get.k3s.io | sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for node to become Ready
+      shell: |
+        kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get node \
+          -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}'
+      register: node_ready
+      retries: 30
+      delay: 5
+      until: node_ready.stdout == "True"
+
+    - name: Fetch node-token
+      slurp:
+        src: "{{ data_dir }}/server/node-token"
+      register: node_token_b64
+
+    - name: Share token with other plays
+      add_host:
+        name: k3s_token_holder
+        node_token: "{{ node_token_b64.content | b64decode | trim }}"
+
+    - name: Print cluster info
+      debug:
+        msg:
+          - "First server is Ready."
+          - "Join URL : https://{{ first_server_ip }}:6443"
+          - "Token    : {{ node_token_b64.content | b64decode | trim }}"
+
+# ------- Additional server nodes ----------------------------------------------
+
+- name: Join additional k3s servers
+  hosts: k3s_servers[1:]
+  become: true
+  gather_facts: false
+  serial: 1   # join one at a time to keep etcd quorum stable
+
+  vars_files:
+    - ../../.env
+
+  vars:
+    first_server_ip:       "{{ FIRST_SERVER_IP }}"
+    k3s_version:           "{{ K3S_VERSION | default('') }}"
+    cluster_cidr:          "{{ CLUSTER_CIDR | default('10.42.0.0/16') }}"
+    service_cidr:          "{{ SERVICE_CIDR | default('10.43.0.0/16') }}"
+    extra_sans:            "{{ EXTRA_SANS | default('') }}"
+    data_dir:              "{{ DATA_DIR | default('/var/lib/rancher/k3s') }}"
+    node_token:            "{{ hostvars['k3s_token_holder']['node_token'] }}"
+    eviction_hard_memory:  "{{ EVICTION_HARD_MEMORY | default('200Mi') }}"
+    eviction_soft_memory:  "{{ EVICTION_SOFT_MEMORY | default('300Mi') }}"
+    eviction_soft_grace:   "{{ EVICTION_SOFT_GRACE | default('30s') }}"
+    disable_local_storage: "{{ DISABLE_LOCAL_STORAGE | default('false') }}"
+
+  tasks:
+
+    - name: Write k3s config file (additional server)
+      copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: '0600'
+        content: |
+          server: "https://{{ first_server_ip }}:6443"
+          token: "{{ node_token }}"
+          node-ip: "{{ ansible_host }}"
+          cluster-cidr: "{{ cluster_cidr }}"
+          service-cidr: "{{ service_cidr }}"
+          data-dir: "{{ data_dir }}"
+
+          tls-san:
+            - "{{ first_server_ip }}"
+            {% if extra_sans %}
+            {% for san in extra_sans.split(',') %}
+            - "{{ san | trim }}"
+            {% endfor %}
+            {% endif %}
+
+          disable:
+            - traefik
+            - servicelb
+            {% if disable_local_storage == 'true' %}
+            - local-storage
+            {% endif %}
+
+          etcd-expose-metrics: true
+
+          kubelet-arg:
+            - "eviction-hard=memory.available<{{ eviction_hard_memory }}"
+            - "eviction-soft=memory.available<{{ eviction_soft_memory }}"
+            - "eviction-soft-grace-period=memory.available={{ eviction_soft_grace }}"
+            - "max-pods=110"
+
+    - name: Install k3s (additional server)
+      environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+      shell: curl -sfL https://get.k3s.io | sh -s - server
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for this node to be Ready
+      shell: |
+        kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes \
+          --field-selector metadata.name={{ inventory_hostname }} \
+          -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}'
+      register: node_ready
+      retries: 30
+      delay: 5
+      until: node_ready.stdout == "True"
+      delegate_to: "{{ groups['k3s_servers'][0] }}"

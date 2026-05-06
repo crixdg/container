@@ -1,0 +1,35 @@
+---
+# Completely remove k3s from all nodes.
+# WARNING: this destroys all cluster state and workloads.
+
+- name: Uninstall k3s from all nodes
+  hosts: k3s_cluster
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Run k3s server uninstall script
+      shell: /usr/local/bin/k3s-uninstall.sh
+      ignore_errors: true
+
+    - name: Run k3s agent uninstall script
+      shell: /usr/local/bin/k3s-agent-uninstall.sh
+      ignore_errors: true
+
+    - name: Remove k3s config file
+      file:
+        path: /etc/rancher/k3s/config.yaml
+        state: absent
+
+    - name: Remove kernel module config
+      file:
+        path: /etc/modules-load.d/k3s.conf
+        state: absent
+
+    - name: Remove sysctl config
+      file:
+        path: /etc/sysctl.d/k3s.conf
+        state: absent
+
+    - debug:
+        msg: "k3s removed from {{ inventory_hostname }}."
