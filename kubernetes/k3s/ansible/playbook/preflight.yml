@@ -1,0 +1,91 @@
+---
+# OS prerequisites for all k3s nodes (servers + agents).
+# Mirrors the kubeadm preflight steps in ansible/kubernetes-setup/playbook/
+# but targets k3s-specific requirements.
+
+- name: OS preflight — all nodes
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    # ── Swap ────────────────────────────────────────────────────────────────────
+    - name: Disable swap (temporary)
+      command: swapoff -a
+      changed_when: false
+
+    - name: Disable swap (permanent — comment out swap entries in /etc/fstab)
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*[\s\t]swap[\s\t].*)$'
+        replace: '# \1'
+
+    # ── SELinux (RHEL/CentOS only) ──────────────────────────────────────────────
+    - name: Set SELinux to permissive (temporary)
+      command: setenforce 0
+      ignore_errors: true   # no-op on non-RHEL
+
+    - name: Set SELinux to permissive (permanent)
+      replace:
+        path: /etc/selinux/config
+        regexp: "^SELINUX=.*$"
+        replace: "SELINUX=permissive"
+      ignore_errors: true   # file absent on Debian/Ubuntu
+
+    # ── Kernel modules ──────────────────────────────────────────────────────────
+    - name: Write kernel module load config
+      copy:
+        dest: /etc/modules-load.d/k3s.conf
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Load kernel modules now
+      shell: |
+        modprobe overlay
+        modprobe br_netfilter
+      changed_when: false
+
+    # ── Sysctl ──────────────────────────────────────────────────────────────────
+    - name: Write sysctl config for Kubernetes networking
+      copy:
+        dest: /etc/sysctl.d/k3s.conf
+        content: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward                 = 1
+
+    - name: Apply sysctl changes
+      command: sysctl --system
+      changed_when: false
+
+    # ── Dependencies ────────────────────────────────────────────────────────────
+    - name: Install curl and iptables (Debian/Ubuntu)
+      apt:
+        name: [curl, iptables, nfs-common, open-iscsi]
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Install curl and iptables (RHEL)
+      dnf:
+        name: [curl, iptables, nfs-utils, iscsi-initiator-utils]
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Enable and start iscsid (required by Longhorn)
+      systemd:
+        name: iscsid
+        enabled: true
+        state: started
+      ignore_errors: true
+
+    # ── Verify ──────────────────────────────────────────────────────────────────
+    - name: Confirm swap is off
+      command: free -h
+      register: free_output
+      changed_when: false
+
+    - debug:
+        msg: "{{ free_output.stdout_lines }}"
