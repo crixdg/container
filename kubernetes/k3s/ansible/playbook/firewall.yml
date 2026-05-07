@@ -13,10 +13,10 @@
 - name: Firewall — server nodes
   hosts: k3s_servers
   become: true
-  gather_facts: false
+  gather_facts: true
 
   tasks:
-    - name: Open API server port (firewalld)
+    - name: Open server ports (firewalld)
       shell: |
         firewall-cmd --permanent --add-port=6443/tcp
         firewall-cmd --permanent --add-port=2379-2380/tcp
@@ -25,9 +25,8 @@
         firewall-cmd --permanent --add-port=10250/tcp
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
-      ignore_errors: true
 
-    - name: Open API server port (ufw)
+    - name: Open server ports (ufw)
       shell: |
         ufw allow 6443/tcp
         ufw allow 2379:2380/tcp
@@ -35,12 +34,11 @@
         ufw allow 51820/udp
         ufw allow 10250/tcp
       when: ansible_os_family == "Debian"
-      ignore_errors: true
 
 - name: Firewall — agent nodes
   hosts: k3s_agents
   become: true
-  gather_facts: false
+  gather_facts: true
 
   tasks:
     - name: Open agent ports (firewalld)
@@ -50,7 +48,6 @@
         firewall-cmd --permanent --add-port=10250/tcp
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
-      ignore_errors: true
 
     - name: Open agent ports (ufw)
       shell: |
@@ -58,4 +55,3 @@
         ufw allow 51820/udp
         ufw allow 10250/tcp
       when: ansible_os_family == "Debian"
-      ignore_errors: true
