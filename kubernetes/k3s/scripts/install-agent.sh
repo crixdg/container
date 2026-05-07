@@ -76,6 +76,6 @@ detect_os
 install_deps
 
 echo "Joining worker to $K3S_SERVER_URL ..."
-curl -sfL https://get.k3s.io | sh -s - agent
+INSTALL_K3S_BIN_DIR="${K3S_BIN_DIR:-/usr/local/bin}" curl -sfL https://get.k3s.io | sh -s - agent
 
-echo "Agent installed. Verify on the server with: kubectl get nodes"
+echo "Agent installed. Verify on the server with: k3s kubectl get nodes"
