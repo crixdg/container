@@ -35,7 +35,6 @@ Step-by-step checklist for setting up a k3s single-node cluster, with an optiona
   | Variable          | Value to set                              |
   | ----------------- | ----------------------------------------- |
   | `NODE_IP`         | IP of this node (used by install-server.sh) |
-  | `FIRST_SERVER_IP` | Same as `NODE_IP` for single-node; HA join endpoint for multi-node |
   | `K3S_VERSION`     | Pinned release, e.g. `v1.35.4+k3s1`       |
   | `CLUSTER_CIDR`    | Pod network CIDR (default `10.42.0.0/16`) |
   | `SERVICE_CIDR`    | Service CIDR (default `10.43.0.0/16`)     |
