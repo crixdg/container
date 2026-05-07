@@ -45,13 +45,13 @@ cp kubernetes/k3s/config.env kubernetes/k3s/.env
 
 Edit `.env` and set at minimum:
 
-| Variable          | Description                                      |
-| ----------------- | ------------------------------------------------ |
+| Variable          | Description                                     |
+| ----------------- | ----------------------------------------------- |
 | `FIRST_SERVER_IP` | IP of the first (bootstrap) server node         |
 | `K3S_VERSION`     | Pin a release, e.g. `v1.35.4+k3s1`              |
-| `CLUSTER_CIDR`    | Pod network CIDR (default `10.42.0.0/16`)        |
+| `CLUSTER_CIDR`    | Pod network CIDR (default `10.42.0.0/16`)       |
 | `SERVICE_CIDR`    | Service network CIDR (default `10.43.0.0/16`)   |
-| `EXTRA_SANS`      | Extra IPs/hostnames for the API server TLS cert  |
+| `EXTRA_SANS`      | Extra IPs/hostnames for the API server TLS cert |
 
 ### 2a. Provision with Ansible (recommended for multi-node)
 
@@ -131,6 +131,7 @@ bash kubernetes/k3s/helm/install-essentials.sh
 ```
 
 This installs in dependency order:
+
 1. **cert-manager** — TLS certificate management
 2. **ingress-nginx** — Ingress controller (Traefik is disabled by default)
 3. **Longhorn** — Distributed block storage
@@ -166,18 +167,18 @@ ansible-playbook -i kubernetes/k3s/ansible/inventory/hosts.ini \
 
 ## Reference Docs
 
-| File | Topic |
-| ---- | ----- |
-| `docs/1_k3s_components.md` | Core k3s components overview |
-| `docs/2_k3s_container_runtime.md` | Container runtime configuration |
-| `docs/3_k3s_pod_networking.md` | Pod networking (Flannel default) |
-| `docs/3.1_k3s_flannel_to_cillium.md` | Migrating CNI from Flannel to Cilium |
-| `docs/3.2_k3s_flannel_to_cilium_maintenance.md` | Cilium migration — maintenance window approach |
-| `docs/3.3_k3s_flannel_to_cilium_blue_green.md` | Cilium migration — blue/green approach |
-| `docs/4_k3s_cluster_dns.md` | Cluster DNS (CoreDNS) |
-| `docs/5_k3s_state_store.md` | etcd vs embedded SQLite |
-| `docs/6_k3s_storage.md` | Storage classes and PV provisioning |
-| `docs/6.1_k3s_local_path_to_longhorn.md` | Migrating from local-path to Longhorn |
-| `docs/6.2_k3s_local_path_to_longhorn_no_downtime.md` | Zero-downtime storage migration |
-| `docs/7_k3s_ingress.md` | Ingress setup and configuration |
-| `docs/8_k3s_load_balancer.md` | Load balancer options (MetalLB vs Klipper) |
+| File                                                 | Topic                                          |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| `docs/1_k3s_components.md`                           | Core k3s components overview                   |
+| `docs/2_k3s_container_runtime.md`                    | Container runtime configuration                |
+| `docs/3_k3s_pod_networking.md`                       | Pod networking (Flannel default)               |
+| `docs/3.1_k3s_flannel_to_cillium.md`                 | Migrating CNI from Flannel to Cilium           |
+| `docs/3.2_k3s_flannel_to_cilium_maintenance.md`      | Cilium migration — maintenance window approach |
+| `docs/3.3_k3s_flannel_to_cilium_blue_green.md`       | Cilium migration — blue/green approach         |
+| `docs/4_k3s_cluster_dns.md`                          | Cluster DNS (CoreDNS)                          |
+| `docs/5_k3s_state_store.md`                          | etcd vs embedded SQLite                        |
+| `docs/6_k3s_storage.md`                              | Storage classes and PV provisioning            |
+| `docs/6.1_k3s_local_path_to_longhorn.md`             | Migrating from local-path to Longhorn          |
+| `docs/6.2_k3s_local_path_to_longhorn_no_downtime.md` | Zero-downtime storage migration                |
+| `docs/7_k3s_ingress.md`                              | Ingress setup and configuration                |
+| `docs/8_k3s_load_balancer.md`                        | Load balancer options (MetalLB vs Klipper)     |
