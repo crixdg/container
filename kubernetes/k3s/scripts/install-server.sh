@@ -89,14 +89,14 @@ if [ -n "${K3S_VERSION:-}" ]; then
 fi
 
 echo "Installing k3s server on $NODE_IP ..."
-INSTALL_K3S_BIN_DIR="${K3S_BIN_DIR:-/usr/local/bin}" curl -sfL https://get.k3s.io | sh -
+curl -sfL https://get.k3s.io | sh -
 
 # ------- Wait for node Ready ------------------------------------------------
 
 echo "Waiting for node to become Ready ..."
 STATUS=""
 for i in $(seq 1 60); do
-  STATUS=$("${K3S_BIN_DIR:-/usr/local/bin}/k3s" kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get node \
+  STATUS=$(/usr/local/bin/k3s kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get node \
     -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   if [ "$STATUS" = "True" ]; then
     echo "Node is Ready."
