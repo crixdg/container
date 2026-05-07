@@ -1,6 +1,9 @@
 ---
 # Join k3s agent (worker) nodes to the cluster.
 # Reads the node-token from the first server via Ansible.
+#
+# Variables are loaded from ansible/group_vars/all.yml.
+# Override any value on the command line with -e VAR=value.
 
 # ------- Collect token from first server --------------------------------------
 
@@ -9,16 +12,10 @@
   become: true
   gather_facts: false
 
-  vars_files:
-    - ../../.env
-
-  vars:
-    data_dir: "{{ DATA_DIR | default('/var/lib/rancher/k3s') }}"
-
   tasks:
     - name: Fetch node-token
       slurp:
-        src: "{{ data_dir }}/server/node-token"
+        src: "{{ DATA_DIR }}/server/node-token"
       register: node_token_b64
 
     - name: Share token
@@ -33,44 +30,38 @@
   become: true
   gather_facts: false
 
-  vars_files:
-    - ../../.env
-
-  vars:
-    first_server_ip:      "{{ FIRST_SERVER_IP }}"
-    k3s_version:          "{{ K3S_VERSION | default('') }}"
-    data_dir:             "{{ DATA_DIR | default('/var/lib/rancher/k3s') }}"
-    node_token:           "{{ hostvars['k3s_token_holder']['node_token'] }}"
-    eviction_hard_memory: "{{ EVICTION_HARD_MEMORY | default('200Mi') }}"
-    eviction_soft_memory: "{{ EVICTION_SOFT_MEMORY | default('300Mi') }}"
-    eviction_soft_grace:  "{{ EVICTION_SOFT_GRACE | default('30s') }}"
-
   tasks:
+
+    - name: Create rancher config directory
+      file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: '0755'
 
     - name: Write k3s agent config file
       copy:
         dest: /etc/rancher/k3s/config.yaml
         mode: '0600'
         content: |
-          server: "https://{{ first_server_ip }}:6443"
-          token: "{{ node_token }}"
+          server: "https://{{ FIRST_SERVER_IP }}:6443"
+          token: "{{ hostvars['k3s_token_holder']['node_token'] }}"
           node-ip: "{{ ansible_host }}"
-          data-dir: "{{ data_dir }}"
+          data-dir: "{{ DATA_DIR }}"
 
           kubelet-arg:
-            - "eviction-hard=memory.available<{{ eviction_hard_memory }}"
-            - "eviction-soft=memory.available<{{ eviction_soft_memory }}"
-            - "eviction-soft-grace-period=memory.available={{ eviction_soft_grace }}"
+            - "eviction-hard=memory.available<{{ EVICTION_HARD_MEMORY }}"
+            - "eviction-soft=memory.available<{{ EVICTION_SOFT_MEMORY }}"
+            - "eviction-soft-grace-period=memory.available={{ EVICTION_SOFT_GRACE }}"
             - "max-pods=110"
 
     - name: Install k3s agent
       environment:
-        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+        INSTALL_K3S_VERSION: "{{ K3S_VERSION }}"
       shell: curl -sfL https://get.k3s.io | sh -s - agent
       args:
         creates: /usr/local/bin/k3s
 
-    - name: Confirm agent joined
+    - name: Wait for agent to be Ready
       shell: |
         kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes \
           --field-selector metadata.name={{ inventory_hostname }} \
@@ -79,4 +70,5 @@
       retries: 30
       delay: 5
       until: node_ready.stdout == "True"
+      changed_when: false
       delegate_to: "{{ groups['k3s_servers'][0] }}"

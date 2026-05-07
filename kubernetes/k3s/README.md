@@ -6,7 +6,8 @@ Lightweight Kubernetes cluster provisioning using k3s. Supports single-node and 
 
 ```
 kubernetes/k3s/
-├── .env.example           # Template — copy to .env and fill in your values
+├── .env.server.example    # Server config template — copy to .env on server nodes
+├── .env.agent.example     # Agent config template — copy to .env on agent nodes
 ├── registries.yaml        # Private registry config (place on nodes before install)
 ├── install-server.sh      # Bootstrap a server node manually
 ├── install-agent.sh       # Join a worker node manually
@@ -40,7 +41,11 @@ kubernetes/k3s/
 ### 1. Configure
 
 ```bash
-cp kubernetes/k3s/.env.example kubernetes/k3s/.env
+# on server nodes
+cp kubernetes/k3s/.env.server.example kubernetes/k3s/.env
+
+# on agent nodes
+cp kubernetes/k3s/.env.agent.example kubernetes/k3s/.env
 ```
 
 Edit `.env` and set at minimum:
