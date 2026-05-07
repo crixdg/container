@@ -20,7 +20,9 @@ echo "==> [3/3] Longhorn"
 bash "$HELM_DIR/longhorn/install.sh"
 
 echo ""
+K3S_BIN="${K3S_BIN_DIR:-/usr/local/bin}/k3s"
+
 echo "All essentials installed. Cluster status:"
-kubectl get nodes -o wide
+"$K3S_BIN" kubectl get nodes -o wide
 echo ""
-kubectl get pods -A | grep -E 'cert-manager|ingress-nginx|longhorn' || true
+"$K3S_BIN" kubectl get pods -A | grep -E 'cert-manager|ingress-nginx|longhorn' || true
