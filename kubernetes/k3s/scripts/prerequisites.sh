@@ -55,7 +55,7 @@ check_systemd() {
 }
 
 # ---------------------------------------------------------------------------
-# 2. Root / passwordless sudo
+# 2. Root / passwordless sudo + /usr/local/bin in sudo PATH
 # ---------------------------------------------------------------------------
 check_privilege() {
   header "Privilege"
@@ -65,6 +65,23 @@ check_privilege() {
     ok "Passwordless sudo available (user: $(id -un))"
   else
     fail "Not root and no passwordless sudo — install scripts require root or passwordless sudo"
+  fi
+
+  header "sudo PATH"
+  if sudo grep -q "secure_path" /etc/sudoers 2>/dev/null; then
+    if sudo grep "secure_path" /etc/sudoers | grep -q "/usr/local/bin"; then
+      ok "/usr/local/bin is in sudo secure_path"
+    else
+      info "/usr/local/bin missing from sudo secure_path — fixing ..."
+      sudo sed -i 's|secure_path\s*=\s*\(.*\)|\0:/usr/local/bin|' /etc/sudoers
+      if sudo grep "secure_path" /etc/sudoers | grep -q "/usr/local/bin"; then
+        ok "/usr/local/bin added to sudo secure_path"
+      else
+        fail "Could not update secure_path — add /usr/local/bin manually via: sudo visudo"
+      fi
+    fi
+  else
+    info "secure_path not set in sudoers — /usr/local/bin should be accessible via sudo"
   fi
 }
 
