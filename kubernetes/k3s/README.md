@@ -195,3 +195,6 @@ ansible-playbook -i kubernetes/k3s/ansible/inventory/hosts.ini \
 | `docs/6.2_k3s_local_path_to_longhorn_no_downtime.md` | Zero-downtime storage migration                |
 | `docs/7_k3s_ingress.md`                              | Ingress setup and configuration                |
 | `docs/8_k3s_load_balancer.md`                        | Load balancer options (MetalLB vs Klipper)     |
+| `docs/9_k3s_production_readiness.md`                 | Post-install production readiness checklist    |
+| `docs/10_k3s_cluster_testing.md`                     | Resilience, chaos, and upgrade testing         |
+| `docs/11_k3s_load_and_chaos.md`                      | Load testing and chaos under live traffic      |
