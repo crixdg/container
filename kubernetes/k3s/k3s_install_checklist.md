@@ -28,7 +28,7 @@ Step-by-step checklist for setting up a k3s single-node cluster, with an optiona
 
 - [ ] Copy the config template:
   ```bash
-  cp kubernetes/k3s/.env.server.example kubernetes/k3s/.env
+  cp kubernetes/k3s/scripts/.env.server.example kubernetes/k3s/scripts/.env
   ```
 - [ ] Edit `.env` and set at minimum:
 
@@ -51,7 +51,7 @@ Step-by-step checklist for setting up a k3s single-node cluster, with an optiona
 
 - [ ] Run the server install script:
   ```bash
-  sudo bash kubernetes/k3s/install-server.sh
+  sudo bash kubernetes/k3s/scripts/install-server.sh
   ```
 - [ ] Confirm k3s service is running:
   ```bash
@@ -86,7 +86,7 @@ export KUBECONFIG=~/.kube/k3s.yaml
 - [ ] Run the essentials installer:
 
   ```bash
-  bash kubernetes/k3s/helm/install-essentials.sh
+  bash kubernetes/k3s/scripts/install-essentials.sh
   ```
 
   Installs in dependency order:
@@ -254,7 +254,7 @@ For each worker node:
   ```bash
   K3S_URL=https://<CLUSTER_VIP>:6443 \
   K3S_TOKEN=<token> \
-  sudo bash kubernetes/k3s/install-agent.sh
+  sudo bash kubernetes/k3s/scripts/install-agent.sh
   ```
 - [ ] Confirm node reaches `Ready`:
   ```bash
@@ -299,13 +299,14 @@ k3s ships with Flannel by default. If you need network policies, encryption, or 
 
 | File                         | Purpose                                         |
 | ---------------------------- | ----------------------------------------------- |
-| `.env.server.example`        | Server config template                          |
-| `.env.agent.example`         | Agent config template                           |
+| `scripts/.env.server.example`        | Server config template (copy to scripts/.env)   |
+| `scripts/.env.agent.example`         | Agent config template (copy to scripts/.env)    |
+| `ansible/group_vars/all.example.yml` | Ansible variables template (copy to all.yml)    |
 | `registries.yaml`            | Private registry mirrors — deploy before k3s    |
-| `install-server.sh`          | Bootstrap a k3s server node                     |
-| `install-agent.sh`           | Join a k3s agent (worker) node                  |
-| `uninstall.sh`               | Remove k3s from a node                          |
-| `helm/install-essentials.sh` | Install cert-manager + ingress-nginx + Longhorn |
+| `scripts/install-server.sh`          | Bootstrap a k3s server node (Debian + RHEL)     |
+| `scripts/install-agent.sh`           | Join a k3s agent (worker) node (Debian + RHEL)  |
+| `scripts/uninstall.sh`               | Remove k3s from a node                          |
+| `scripts/install-essentials.sh`      | Install cert-manager + ingress-nginx + Longhorn |
 | `ansible/playbook/site.yml`  | Full Ansible provisioning (all nodes at once)   |
 | `ansible/playbook/clean.yml` | Tear down the cluster via Ansible               |
 

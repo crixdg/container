@@ -6,15 +6,21 @@ Lightweight Kubernetes cluster provisioning using k3s. Supports single-node and 
 
 ```
 kubernetes/k3s/
-├── .env.server.example    # Server config template — copy to .env on server nodes
-├── .env.agent.example     # Agent config template — copy to .env on agent nodes
 ├── registries.yaml        # Private registry config (place on nodes before install)
-├── install-server.sh      # Bootstrap a server node manually
-├── install-agent.sh       # Join a worker node manually
-├── uninstall.sh           # Remove k3s from a node
+├── scripts/
+│   ├── .env.server.example      # Server config template — copy to .env on server nodes
+│   ├── .env.agent.example       # Agent config template — copy to .env on agent nodes
+│   ├── install-server.sh        # Bootstrap a server node (Debian + RHEL)
+│   ├── install-agent.sh         # Join a worker node (Debian + RHEL)
+│   ├── uninstall.sh             # Remove k3s from a node
+│   ├── install-essentials.sh    # Install cert-manager + ingress-nginx + Longhorn
+│   ├── set-default-storageclass.sh  # Switch default StorageClass to Longhorn
+│   └── prerequisites.sh         # Check section 1.1 prerequisites (Debian + RHEL)
 ├── ansible/
 │   ├── inventory/
-│   │   └── hosts.ini      # Node IPs and roles
+│   │   └── hosts.ini            # Node IPs and roles
+│   ├── group_vars/
+│   │   └── all.example.yml      # Cluster variables template — copy to all.yml
 │   └── playbook/
 │       ├── site.yml       # Full cluster provisioning (runs all steps)
 │       ├── preflight.yml  # System checks and prerequisites
@@ -23,7 +29,6 @@ kubernetes/k3s/
 │       ├── install-agents.yml
 │       └── clean.yml      # Tear down the cluster
 ├── helm/
-│   ├── install-essentials.sh   # Install cert-manager + ingress-nginx + Longhorn
 │   ├── cert-manager/
 │   ├── ingress-nginx/
 │   └── longhorn/
@@ -42,10 +47,13 @@ kubernetes/k3s/
 
 ```bash
 # on server nodes
-cp kubernetes/k3s/.env.server.example kubernetes/k3s/.env
+cp kubernetes/k3s/scripts/.env.server.example kubernetes/k3s/scripts/.env
 
 # on agent nodes
-cp kubernetes/k3s/.env.agent.example kubernetes/k3s/.env
+cp kubernetes/k3s/scripts/.env.agent.example kubernetes/k3s/scripts/.env
+
+# for Ansible
+cp kubernetes/k3s/ansible/group_vars/all.example.yml kubernetes/k3s/ansible/group_vars/all.yml
 ```
 
 Edit `.env` and set at minimum:
@@ -98,7 +106,7 @@ ansible-playbook -i kubernetes/k3s/ansible/inventory/hosts.ini \
 On the server node (set `NODE_IP` in `.env` first):
 
 ```bash
-sudo bash kubernetes/k3s/install-server.sh
+sudo bash kubernetes/k3s/scripts/install-server.sh
 ```
 
 The script prints the node token and kubeconfig instructions when it finishes.
@@ -108,7 +116,7 @@ On each worker node:
 ```bash
 K3S_SERVER_URL=https://<server-ip>:6443 \
 K3S_TOKEN=<token-from-server>          \
-sudo bash kubernetes/k3s/install-agent.sh
+sudo bash kubernetes/k3s/scripts/install-agent.sh
 ```
 
 ### 3. Configure kubectl
@@ -132,7 +140,7 @@ kubectl get nodes
 ### 4. Install essential cluster components
 
 ```bash
-bash kubernetes/k3s/helm/install-essentials.sh
+bash kubernetes/k3s/scripts/install-essentials.sh
 ```
 
 This installs in dependency order:
@@ -160,7 +168,7 @@ systemctl restart k3s-agent    # agent nodes
 ## Uninstall
 
 ```bash
-sudo bash kubernetes/k3s/uninstall.sh
+sudo bash kubernetes/k3s/scripts/uninstall.sh
 ```
 
 Or via Ansible to wipe all nodes at once:

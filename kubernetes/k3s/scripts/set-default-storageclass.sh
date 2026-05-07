@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Switch the default StorageClass from local-path to longhorn.
 # Run this only after Longhorn is installed and healthy.
 
