@@ -28,7 +28,7 @@ Step-by-step checklist for setting up a k3s single-node cluster, with an optiona
 
 - [ ] Copy the config template:
   ```bash
-  cp kubernetes/k3s/config.env kubernetes/k3s/.env
+  cp kubernetes/k3s/.env.example kubernetes/k3s/.env
   ```
 - [ ] Edit `.env` and set at minimum:
 
@@ -298,7 +298,7 @@ k3s ships with Flannel by default. If you need network policies, encryption, or 
 
 | File                         | Purpose                                         |
 | ---------------------------- | ----------------------------------------------- |
-| `config.env` / `.env`        | Cluster variables — edit before any install     |
+| `.env.example` / `.env`      | Cluster variables — edit before any install     |
 | `registries.yaml`            | Private registry mirrors — deploy before k3s    |
 | `install-server.sh`          | Bootstrap a k3s server node                     |
 | `install-agent.sh`           | Join a k3s agent (worker) node                  |
