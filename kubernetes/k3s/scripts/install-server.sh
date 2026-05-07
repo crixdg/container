@@ -95,14 +95,14 @@ curl -sfL https://get.k3s.io | sh -
 
 echo "Waiting for node to become Ready ..."
 STATUS=""
-for i in $(seq 1 30); do
-  STATUS=$(kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get node \
+for i in $(seq 1 60); do
+  STATUS=$(/usr/local/bin/k3s kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get node \
     -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   if [ "$STATUS" = "True" ]; then
     echo "Node is Ready."
     break
   fi
-  echo "  attempt $i/30 — waiting 5s ..."
+  echo "  attempt $i/60 — waiting 5s ..."
   sleep 5
 done
 
