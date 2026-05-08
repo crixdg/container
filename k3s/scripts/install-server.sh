@@ -92,7 +92,7 @@ if [ -n "${K3S_VERSION:-}" ]; then
 fi
 
 echo "Installing k3s server on $NODE_IP ..."
-curl -sfL https://get.k3s.io | sh -
+curl -sfL https://get.k3s.io | sudo sh -
 
 # ------- Wait for node Ready ------------------------------------------------
 
