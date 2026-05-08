@@ -1,0 +1,70 @@
+# CloudNativePG — Cluster CR
+# Applied with: kubectl apply -f helm-values.yaml -n postgres
+#
+# Single-node start: instances: 1 (no standby, no failover)
+# HA: bump to instances: 3 (1 primary + 2 standbys) — zero-downtime rolling change
+#
+# Requires: cloudnative-pg operator installed in cnpg-system namespace
+
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  instances: 1  # single-node start; bump to 3 for HA
+
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  primaryUpdateStrategy: unsupervised  # operator handles rolling updates automatically
+
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"
+      effective_cache_size: "1GB"
+      maintenance_work_mem: "128MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "16MB"
+      default_statistics_target: "100"
+      random_page_cost: "1.1"        # tuned for SSD/network-attached storage
+      effective_io_concurrency: "200"
+      log_min_duration_statement: "1000"  # log queries slower than 1s
+
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+        name: postgres-app-secret  # pre-created: kubectl create secret generic postgres-app-secret --from-literal=username=app --from-literal=password=<your-password> -n postgres
+
+  storage:
+    storageClass: longhorn
+    size: 20Gi
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+  monitoring:
+    enablePodMonitor: false  # set true when using kube-prometheus-stack
+
+  # Uncomment to enable continuous WAL archiving to S3-compatible storage (required for PITR)
+  # backup:
+  #   retentionPolicy: "30d"
+  #   barmanObjectStore:
+  #     destinationPath: s3://postgres-backups/
+  #     endpointURL: http://minio.minio:9000  # if using internal MinIO
+  #     s3Credentials:
+  #       accessKeyId:
+  #         name: s3-backup-creds
+  #         key: ACCESS_KEY_ID
+  #       secretAccessKey:
+  #         name: s3-backup-creds
+  #         key: SECRET_ACCESS_KEY
+  #     wal:
+  #       compression: gzip
