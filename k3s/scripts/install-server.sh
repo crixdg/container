@@ -96,6 +96,10 @@ curl -sfL https://get.k3s.io | sh -
 
 # ------- Wait for node Ready ------------------------------------------------
 
+if [ "${DISABLE_FLANNEL:-false}" = "true" ]; then
+  echo "NOTE: flannel is disabled — the node will stay NotReady until a CNI (e.g. Cilium) is installed."
+fi
+
 echo "Waiting for node to become Ready ..."
 STATUS=""
 for i in $(seq 1 60); do
@@ -110,8 +114,12 @@ for i in $(seq 1 60); do
 done
 
 if [ "$STATUS" != "True" ]; then
-  echo "Node did not become Ready in time. Check: journalctl -u k3s -f"
-  exit 1
+  if [ "${DISABLE_FLANNEL:-false}" = "true" ]; then
+    echo "Node is not Ready — install a CNI (e.g. Cilium) and the node will transition to Ready automatically."
+  else
+    echo "Node did not become Ready in time. Check: journalctl -u k3s -f"
+    exit 1
+  fi
 fi
 
 # ------- Summary ------------------------------------------------------------
