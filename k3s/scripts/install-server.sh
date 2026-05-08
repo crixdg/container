@@ -69,11 +69,12 @@ INSTALL_ARGS=(
   --cluster-cidr "${CLUSTER_CIDR:-10.42.0.0/16}"
   --service-cidr "${SERVICE_CIDR:-10.43.0.0/16}"
   --data-dir    "${DATA_DIR:-/var/lib/rancher/k3s}"
-  --disable traefik # We use nginx-ingress instead of traefik
-  --disable servicelb
-  --disable-kube-proxy # We use Cilium in kube-proxy replacement mode, so disable the built-in kube-proxy
-  --flannel-backend=none # We use Cilium for networking, so disable flannel (which is included by default and would conflict with Cilium)
 )
+
+[ "${DISABLE_FLANNEL:-false}" = "true" ] && INSTALL_ARGS+=(--flannel-backend none)
+[ "${DISABLE_KUBE_PROXY:-false}" = "true" ] && INSTALL_ARGS+=(--disable-kube-proxy)
+[ "${DISABLE_TRAEFIK:-false}"    = "true" ] && INSTALL_ARGS+=(--disable traefik)
+[ "${DISABLE_SERVICELB:-false}"  = "true" ] && INSTALL_ARGS+=(--disable servicelb)
 
 TLS_SANS="$NODE_IP"
 [ -n "${EXTRA_SANS:-}" ] && TLS_SANS="$TLS_SANS,$EXTRA_SANS"
