@@ -3,8 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-K8S_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ENV_FILE="$K8S_DIR/config/.env"
+ENV_FILE="$SCRIPT_DIR/.env"
 DEFAULTS="$SCRIPT_DIR/__default_values.yml"
 
 INPUT="${1:-$SCRIPT_DIR/__values.yml}"

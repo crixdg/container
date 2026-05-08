@@ -4,6 +4,11 @@ k8sServiceHost: ${API_SERVER_IP}
 # ! Must match the API server port (default 6443 for k3s/kubeadm); paired with k8sServiceHost above
 k8sServicePort: ${API_SERVER_PORT}
 
+cluster:
+  # ! Unique name per cluster; required for correct identity scoping in clustermesh and for distinguishing
+  # ! metrics/logs when multiple clusters share the same Prometheus or Hubble relay
+  name: ${CLUSTER_NAME}
+
 # ! Ensures agents pick up config changes (e.g. policy updates) without manual restarts
 rollOutCiliumPods: true
 
