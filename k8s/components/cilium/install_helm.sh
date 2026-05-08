@@ -4,19 +4,19 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if helm repo list | grep -q '^cilium'; then
-	echo "Cilium Helm repo already added, skipping."
-else
-	helm repo add cilium https://helm.cilium.io/
-	helm repo update
-fi
+. "$SCRIPT_DIR/install_repo.sh"
 
 VALUE_FILE="$SCRIPT_DIR/values.yaml"
-DEFAULT_VALUE_FILE="$SCRIPT_DIR/__values.yaml"
-VERSION="1.17.4"
+MY_DEFAULT_VALUE_FILE="$SCRIPT_DIR/__values.yaml"
+DEFAULT_VALUE_FILE="$SCRIPT_DIR/__default_values.yaml"
+VERSION="$(cat $SCRIPT_DIR/version.conf)"
+
 
 if [ ! -f "$VALUE_FILE" ]; then
-	VALUE_FILE="$DEFAULT_VALUE_FILE"
+	VALUE_FILE="$MY_DEFAULT_VALUE_FILE"
+	if [ ! -f "$VALUE_FILE" ]; then
+		VALUE_FILE="$DEFAULT_VALUE_FILE"
+	fi
 fi
 
 if [ ! -f "$VALUE_FILE" ]; then
