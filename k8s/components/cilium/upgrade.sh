@@ -13,7 +13,6 @@ VERSION="$(cat $SCRIPT_DIR/version.conf)"
 if [ ! -f "$VALUE_FILE" ]; then
 	VALUE_FILE="$DEFAULT_VALUE_FILE"
 fi
-
 if [ ! -f "$VALUE_FILE" ]; then
 	echo "Not found: $VALUE_FILE"
 	exit 1
