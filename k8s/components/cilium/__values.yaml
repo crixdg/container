@@ -73,12 +73,14 @@ k8sServiceHostRef:
   # -- (string) Key in the ConfigMap containing the Kubernetes service endpoint
   key:
 # -- (string) Kubernetes service host - use "auto" for automatic lookup from the cluster-info ConfigMap
-k8sServiceHost: ""
+# ! Required for kubeProxyReplacement=true so Cilium can reach the API server directly without kube-proxy
+k8sServiceHost: ${API_SERVER_IP}
 # @schema
 # type: [string, integer]
 # @schema
 # -- (string) Kubernetes service port
-k8sServicePort: ""
+# ! Must match the API server port (default 6443 for k3s/kubeadm); paired with k8sServiceHost above
+k8sServicePort: ${API_SERVER_PORT}
 # @schema
 # type: [null, string]
 # @schema
@@ -134,9 +136,9 @@ k8sClientExponentialBackoff:
 cluster:
   # -- Name of the cluster. Only required for Cluster Mesh and mutual authentication with SPIRE.
   # It must respect the following constraints:
-  # * It must contain at most 32 characters;
-  # * It must begin and end with a lower case alphanumeric character;
-  # * It may contain lower case alphanumeric characters and dashes between.
+  # ! It must contain at most 32 characters;
+  # ! It must begin and end with a lower case alphanumeric character;
+  # ! It may contain lower case alphanumeric characters and dashes between.
   # The "default" name cannot be used if the Cluster ID is different from 0.
   name: default
   # -- (int) Unique ID of the cluster. Must be unique across all connected
@@ -223,7 +225,8 @@ agent: true
 # -- Agent daemonset name.
 name: cilium
 # -- Roll out cilium agent pods automatically when configmap is updated.
-rollOutCiliumPods: false
+# ! Ensures agents pick up config changes (e.g. policy updates) without manual restarts
+rollOutCiliumPods: true
 # -- Configuration for the ConfigMap drift detection feature.
 # When enabled, the agent continuously watches the cilium-config ConfigMap
 # and exposes a cilium_drift_checker_config_delta Prometheus metric reporting
@@ -334,7 +337,14 @@ podAnnotations: {}
 podLabels: {}
 # -- Agent resource limits & requests
 # ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-resources: {}
+# ! Prevents the agent from being OOM-killed under load; requests ensure it is scheduled on nodes with enough headroom
+resources:
+  limits:
+    cpu: 4
+    memory: 4Gi
+  requests:
+    cpu: 100m
+    memory: 512Mi
 #   limits:
 #     cpu: 4000m
 #     memory: 4Gi
@@ -510,15 +520,17 @@ l2podAnnouncements:
   # -- A regular expression matching interfaces used for sending Gratuitous ARP pod announcements
   # interfacePattern: ""
 # -- This feature set enables virtual BGP routers to be created via BGP CRDs.
+# ! Enables BGP peering for LoadBalancer IP advertisement to upstream routers (see __bgp_policy.yaml)
 bgpControlPlane:
   # -- Enables the BGP control plane.
-  enabled: false
+  enabled: true
   # -- SecretsNamespace is the namespace which BGP support will retrieve secrets from.
   secretsNamespace:
     # -- Create secrets namespace for BGP secrets.
     create: false
     # -- The name of the secret namespace to which Cilium agents are given read access
-    name: kube-system
+    # ! Changed from default kube-system to cni-system to keep all CNI resources in one namespace
+    name: cni-system
   # -- Status reporting settings
   statusReport:
     # -- Enable/Disable BGP status reporting
@@ -1435,9 +1447,17 @@ hubble:
     #
     #   --set hubble.metrics.enabled="{dns:query;ignoreAAAA,drop,tcp,flow,icmp,http}"
     #
-    enabled: ~
+    # ! Core metrics for observability: DNS queries, dropped packets, L4 (tcp/icmp) and L7 (http) flows
+    enabled:
+      - dns:query;ignoreAAAA
+      - drop
+      - tcp
+      - flow
+      - icmp
+      - http
     # -- Enables exporting hubble metrics in OpenMetrics format.
-    enableOpenMetrics: false
+    # ! Required for Prometheus scraping via OpenMetrics standard instead of legacy format
+    enableOpenMetrics: true
     # -- Configure the port the hubble metric server listens on.
     port: 9965
     tls:
@@ -1695,9 +1715,11 @@ hubble:
       extraIpAddresses: []
   relay:
     # -- Enable Hubble Relay (requires hubble.enabled=true)
-    enabled: false
+    # ! Exposes the Hubble gRPC API cluster-wide so hubble-ui and CLI can query flows from any node
+    enabled: true
     # -- Roll out Hubble Relay pods automatically when configmap is updated.
-    rollOutPods: false
+    # ! Keeps relay in sync with config changes without manual restarts
+    rollOutPods: true
     # -- Hubble-relay container image.
     image:
       # @schema
@@ -1938,7 +1960,8 @@ hubble:
       level: ~
   ui:
     # -- Whether to enable the Hubble UI.
-    enabled: false
+    # ! Provides a web dashboard for visualizing network flows and policy verdicts
+    enabled: true
     standalone:
       # -- When true, it will allow installing the Hubble UI only, without checking dependencies.
       # It is useful if a cluster already has cilium and Hubble relay installed and you just
@@ -1962,7 +1985,8 @@ hubble:
         #         - key: ca.crt
         #           path: hubble-relay-ca.crt
     # -- Roll out Hubble-ui pods automatically when configmap is updated.
-    rollOutPods: false
+    # ! Keeps ui in sync with config changes without manual restarts
+    rollOutPods: true
     tls:
       client:
         # -- Name of the Secret containing the client certificate and key for Hubble UI
@@ -2118,14 +2142,15 @@ hubble:
     # Trailing `/` is required for custom path, ex. `/service-map/`
     baseUrl: "/"
     # -- hubble-ui ingress configuration.
+    # ! Exposes Hubble UI via nginx ingress; nip.io gives a resolvable hostname without a real DNS record
     ingress:
-      enabled: false
+      enabled: true
       annotations: {}
       # kubernetes.io/ingress.class: nginx
       # kubernetes.io/tls-acme: "true"
-      className: ""
+      className: nginx
       hosts:
-        - chart-example.local
+        - hubble-ui.${API_SERVER_IP}.nip.io
       labels: {}
       tls: []
       #  - secretName: chart-example-tls
@@ -2238,7 +2263,8 @@ ipam:
     # type: [array, string]
     # @schema
     # -- IPv4 CIDR list range to delegate to individual nodes for IPAM.
-    clusterPoolIPv4PodCIDRList: ["10.0.0.0/8"]
+    # ! Must match the pod CIDR configured in the cluster (k3s --cluster-cidr or kubeadm podSubnet)
+    clusterPoolIPv4PodCIDRList: [${POD_NETWORK_CIDR}]
     # -- IPv4 CIDR mask size to delegate to individual nodes for IPAM.
     clusterPoolIPv4MaskSize: 24
     # @schema
@@ -2365,7 +2391,9 @@ readinessProbe:
 # @schema@
 # type: [string, boolean]
 # @schema@
-kubeProxyReplacement: "false"
+# ! Replaces kube-proxy entirely with eBPF; required when k3s/k8s is started with --disable kube-proxy
+# ! Must be a string in Cilium 1.16+; boolean true is no longer accepted
+kubeProxyReplacement: "true"
 # -- healthz server bind address for the kube-proxy replacement.
 # To enable set the value to '0.0.0.0:10256' for all ipv4
 # addresses and this '[::]:10256' for all ipv6 addresses.
@@ -2567,9 +2595,10 @@ pprof:
   # -- Enable goroutine blocking profiling for cilium-agent and set the rate of sampled events in nanoseconds (set to 1 to sample all events [warning: performance overhead])
   blockProfileRate: 0
 # -- Configure prometheus metrics on the configured port at /metrics
+# ! Exposes /metrics on port 9962 for Prometheus scraping of Cilium agent internals
 prometheus:
   metricsService: false
-  enabled: false
+  enabled: true
   port: 9962
   serviceMonitor:
     # -- Enable service monitors.
@@ -2624,9 +2653,10 @@ prometheus:
 # -- Grafana dashboards for cilium-agent
 # grafana can import dashboards based on the label and value
 # ref: https://github.com/grafana/helm-charts/tree/main/charts/grafana#sidecar-for-dashboards
+# ! Enables Grafana sidecar auto-discovery; label changed from grafana_dashboard to cilium_grafana_dashboard to avoid conflicts with other chart dashboards
 dashboards:
-  enabled: false
-  label: grafana_dashboard
+  enabled: true
+  label: cilium_grafana_dashboard
   # @schema
   # type: [null, string]
   # @schema
@@ -2641,7 +2671,8 @@ envoy:
   # -- Enable Envoy Proxy in standalone DaemonSet.
   # This field is enabled by default for new installation.
   # @default -- `true` for new installation
-  enabled: ~
+  # ! Disabled — we do not use L7 load balancing or CiliumEnvoyConfig; saves a DaemonSet per node
+  enabled: false
   # -- (int)
   # Set Envoy'--base-id' to use when allocating shared memory regions.
   # Only needs to be changed if multiple Envoy instances will run on the same node and may have conflicts. Supported values: 0 - 4294967295. Defaults to '0'
@@ -3106,7 +3137,8 @@ operator:
   # -- Enable the cilium-operator component (required).
   enabled: true
   # -- Roll out cilium-operator pods automatically when configmap is updated.
-  rollOutPods: false
+  # ! Keeps operator in sync with config changes (IPAM, node management) without manual restarts
+  rollOutPods: true
   # -- cilium-operator image.
   image:
     # @schema
@@ -3808,9 +3840,9 @@ clustermesh:
       nodePort: 32379
       # -- Annotations for the clustermesh-apiserver service.
       # Example annotations to configure an internal load balancer on different cloud providers:
-      # * AKS: service.beta.kubernetes.io/azure-load-balancer-internal: "true"
-      # * EKS: service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
-      # * GKE: networking.gke.io/load-balancer-type: "Internal"
+      # ! AKS: service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      # ! EKS: service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      # ! GKE: networking.gke.io/load-balancer-type: "Internal"
       annotations: {}
       # -- Labels for the clustermesh-apiserver service.
       labels: {}
