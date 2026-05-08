@@ -8,7 +8,7 @@ VALUES_FILE="$SCRIPT_DIR/values.yml"
 TEMPLATE_FILE="$SCRIPT_DIR/__values.yml"
 VERSION="$(cat "$SCRIPT_DIR/version.conf")"
 
-REQUIRED_VARS=(API_SERVER_IP API_SERVER_PORT POD_NETWORK_CIDR CLUSTER_NAME)
+REQUIRED_VARS=(API_SERVER_IP API_SERVER_PORT POD_NETWORK_CIDR CLUSTER_NAME HUBBLE_UI_HOST)
 REQUIRED_BINS=(helm kubectl python3 envsubst)
 
 ERRORS=0
@@ -99,13 +99,13 @@ fi
 section "Generated values.yml"
 # ---------------------------------------------------------------------------
 if [ ! -f "$VALUES_FILE" ]; then
-    fail "values.yml not generated — run: $SCRIPT_DIR/sync_default_values.sh"
+    fail "values.yml not generated — run: $SCRIPT_DIR/generate_values.sh"
 else
     # Check it was generated after the template was last modified
     if [ "$TEMPLATE_FILE" -nt "$VALUES_FILE" ]; then
-        warn "values.yml is older than __values.yml — run: $SCRIPT_DIR/sync_default_values.sh"
+        warn "values.yml is older than __values.yml — run: $SCRIPT_DIR/generate_values.sh"
     elif [ "$ENV_FILE" -nt "$VALUES_FILE" ]; then
-        warn "values.yml is older than .env — run: $SCRIPT_DIR/sync_default_values.sh"
+        warn "values.yml is older than .env — run: $SCRIPT_DIR/generate_values.sh"
     else
         pass "values.yml is up to date"
     fi
