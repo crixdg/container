@@ -4,12 +4,11 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-. "$SCRIPT_DIR/install_repo.sh"
-
 VALUE_FILE="$SCRIPT_DIR/values.yml"
 DEFAULT_VALUE_FILE="$SCRIPT_DIR/__default_values.yml"
 VERSION="$(cat $SCRIPT_DIR/version.conf)"
 
+. "$SCRIPT_DIR/install_repo.sh"
 
 if [ ! -f "$VALUE_FILE" ]; then
 	VALUE_FILE="$DEFAULT_VALUE_FILE"
