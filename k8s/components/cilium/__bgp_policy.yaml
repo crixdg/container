@@ -2,7 +2,7 @@ apiVersion: cilium.io/v2alpha1
 kind: CiliumBGPPeeringPolicy
 metadata:
   name: bgp-peering
-  namespace: cni-plugin
+  namespace: cni-system
 spec:
   nodeSelector:
     matchLabels:

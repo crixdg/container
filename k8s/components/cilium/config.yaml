@@ -1,7 +1,0 @@
-repo_name: cilium
-repo_url: https://helm.cilium.io
-
-name: cilium
-chart: cilium/cilium
-version: 1.17.4
-namespace: cni-plugins
