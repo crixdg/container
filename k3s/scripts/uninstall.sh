@@ -14,3 +14,10 @@ else
 fi
 
 echo "k3s removed."
+
+echo "Cleaning up CNI artifacts ..."
+rm -rf /etc/cni/net.d
+rm -rf /opt/cni/bin
+rm -rf /var/run/cilium
+rm -rf /sys/fs/bpf/tc /sys/fs/bpf/xdp /sys/fs/bpf/cilium 2>/dev/null || true
+echo "CNI artifacts removed."
