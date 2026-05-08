@@ -24,5 +24,5 @@ if ! kubectl get secret postgres-app-secret -n "$NAMESPACE" > /dev/null 2>&1; th
     -n "$NAMESPACE"
 fi
 
-kubectl apply -f "$SCRIPT_DIR/helm-values.yaml" -n "$NAMESPACE"
+kubectl apply -f "$SCRIPT_DIR/helm-values.yml" -n "$NAMESPACE"
 echo "Cluster CR applied. Watch status with: kubectl get cluster -n $NAMESPACE"

@@ -9,10 +9,10 @@ fi
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
 
-VALUE_FILE="$SCRIPT_DIR/$RELEASE_NAME/values.yaml"
+VALUE_FILE="$SCRIPT_DIR/$RELEASE_NAME/values.yml"
 
 if [ ! -f "$VALUE_FILE" ]; then
-  echo "Error: values.yaml not found at $VALUE_FILE"
+  echo "Error: values.yml not found at $VALUE_FILE"
   exit 1
 fi
 

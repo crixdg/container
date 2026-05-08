@@ -15,7 +15,7 @@ if ! kubectl get nodes -l ingress=true --no-headers 2>/dev/null | grep -q .; the
 fi
 
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-  -f "$SCRIPT_DIR/helm-values.yaml" \
+  -f "$SCRIPT_DIR/helm-values.yml" \
   -n ingress-nginx --create-namespace \
   --wait --timeout 3m
 

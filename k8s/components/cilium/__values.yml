@@ -136,9 +136,9 @@ k8sClientExponentialBackoff:
 cluster:
   # -- Name of the cluster. Only required for Cluster Mesh and mutual authentication with SPIRE.
   # It must respect the following constraints:
-  # ! It must contain at most 32 characters;
-  # ! It must begin and end with a lower case alphanumeric character;
-  # ! It may contain lower case alphanumeric characters and dashes between.
+  # * It must contain at most 32 characters;
+  # * It must begin and end with a lower case alphanumeric character;
+  # * It may contain lower case alphanumeric characters and dashes between.
   # The "default" name cannot be used if the Cluster ID is different from 0.
   name: default
   # -- (int) Unique ID of the cluster. Must be unique across all connected
@@ -339,9 +339,6 @@ podLabels: {}
 # ref: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 # ! Prevents the agent from being OOM-killed under load; requests ensure it is scheduled on nodes with enough headroom
 resources:
-  limits:
-    cpu: 4
-    memory: 4Gi
   requests:
     cpu: 100m
     memory: 512Mi
@@ -520,17 +517,15 @@ l2podAnnouncements:
   # -- A regular expression matching interfaces used for sending Gratuitous ARP pod announcements
   # interfacePattern: ""
 # -- This feature set enables virtual BGP routers to be created via BGP CRDs.
-# ! Enables BGP peering for LoadBalancer IP advertisement to upstream routers (see __bgp_policy.yaml)
 bgpControlPlane:
   # -- Enables the BGP control plane.
-  enabled: true
+  enabled: false
   # -- SecretsNamespace is the namespace which BGP support will retrieve secrets from.
   secretsNamespace:
     # -- Create secrets namespace for BGP secrets.
     create: false
     # -- The name of the secret namespace to which Cilium agents are given read access
-    # ! Changed from default kube-system to cni-system to keep all CNI resources in one namespace
-    name: cni-system
+    name: kube-system
   # -- Status reporting settings
   statusReport:
     # -- Enable/Disable BGP status reporting
@@ -2391,9 +2386,7 @@ readinessProbe:
 # @schema@
 # type: [string, boolean]
 # @schema@
-# ! Replaces kube-proxy entirely with eBPF; required when k3s/k8s is started with --disable kube-proxy
-# ! Must be a string in Cilium 1.16+; boolean true is no longer accepted
-kubeProxyReplacement: "true"
+kubeProxyReplacement: "false"
 # -- healthz server bind address for the kube-proxy replacement.
 # To enable set the value to '0.0.0.0:10256' for all ipv4
 # addresses and this '[::]:10256' for all ipv6 addresses.
@@ -2595,9 +2588,9 @@ pprof:
   # -- Enable goroutine blocking profiling for cilium-agent and set the rate of sampled events in nanoseconds (set to 1 to sample all events [warning: performance overhead])
   blockProfileRate: 0
 # -- Configure prometheus metrics on the configured port at /metrics
-# ! Exposes /metrics on port 9962 for Prometheus scraping of Cilium agent internals
+# ! Exposes /metrics on port 9962 for Prometheus scraping of Cilium agent
 prometheus:
-  metricsService: false
+  metricsService: true
   enabled: true
   port: 9962
   serviceMonitor:
@@ -3840,9 +3833,9 @@ clustermesh:
       nodePort: 32379
       # -- Annotations for the clustermesh-apiserver service.
       # Example annotations to configure an internal load balancer on different cloud providers:
-      # ! AKS: service.beta.kubernetes.io/azure-load-balancer-internal: "true"
-      # ! EKS: service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
-      # ! GKE: networking.gke.io/load-balancer-type: "Internal"
+      # * AKS: service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      # * EKS: service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      # * GKE: networking.gke.io/load-balancer-type: "Internal"
       annotations: {}
       # -- Labels for the clustermesh-apiserver service.
       labels: {}

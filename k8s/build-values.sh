@@ -18,8 +18,8 @@ fi
 
 echo "Using .env from: $ENV_FILE"
 
-find "$SCRIPT_DIR" -type f -name "__values.yaml" | while read -r template; do
-  output="${template%__values.yaml}values.yaml"
+find "$SCRIPT_DIR" -type f -name "__values.yml" | while read -r template; do
+  output="${template%__values.yml}values.yml"
   echo "Generating: $output"
   envsubst < "$template" > "$output"
 done

@@ -9,7 +9,7 @@ services:
     network_mode: host
     pid: host
     volumes:
-      - ./process_exporter_cfg.yaml:/etc/process-exporter/config.yml:ro
+      - ./process_exporter_cfg.yml:/etc/process-exporter/config.yml:ro
       - /proc:/rootfs/proc:ro,rslave
     deploy:
       resources:
