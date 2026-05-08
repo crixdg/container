@@ -20,5 +20,4 @@ if [ ! -f "$VALUE_FILE" ]; then
 	exit 1
 fi
 
-helm upgrade cilium cilium/cilium --version $VERSION -f "$VALUE_FILE" \
-	-n cni-system
+helm upgrade cilium cilium/cilium --version $VERSION -f "$VALUE_FILE" -n cni-system
