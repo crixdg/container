@@ -4,7 +4,7 @@
 # Replace the email address before applying.
 #
 # Usage:
-#   kubectl apply -f letsencrypt-http01.yaml
+#   kubectl apply -f letsencrypt-http01.yml
 #
 # Then annotate your Ingress:
 #   annotations:

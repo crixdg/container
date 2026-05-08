@@ -4,7 +4,7 @@ services:
     container_name: ory-hydra-migrate
     command: migrate sql up -e --yes --config /etc/hydra/hydra.yaml
     volumes:
-      - ./x/hydra.yaml:/etc/hydra/hydra.yaml:ro
+      - ./x/hydra.yml:/etc/hydra/hydra.yaml:ro
     depends_on:
       ory-hydra-db:
         condition: service_healthy
@@ -19,7 +19,7 @@ services:
       - "4445:4445" # Admin API
     command: serve all --config /etc/hydra/hydra.yaml
     volumes:
-      - ./x/hydra.yaml:/etc/hydra/hydra.yaml:ro
+      - ./x/hydra.yml:/etc/hydra/hydra.yaml:ro
     environment:
       WEBFINGER_JWKS_BROADCAST_KEYS: "hydra.openid.id-token,hydra.jwt.access-token,cero-as.jwt.access-token"
     depends_on:

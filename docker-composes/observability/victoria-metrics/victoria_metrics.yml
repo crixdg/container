@@ -13,7 +13,7 @@ services:
       - "-loggerFormat=json"
     volumes:
       - victoria-metrics-data:/victoria-metrics-data
-      - ./x/prometheus_cfg.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./x/prometheus_cfg.yml:/etc/prometheus/prometheus.yaml:ro
     networks:
       - observability-network
     extra_hosts:

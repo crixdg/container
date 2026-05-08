@@ -6,7 +6,7 @@ services:
       - "--config=/etc/otel/collector.yaml"
     volumes:
       - /:/hostfs:ro
-      - ./x/otel_collector_host_cfg.yaml:/etc/otel/collector.yaml:ro
+      - ./x/otel_collector_host_cfg.yml:/etc/otel/collector.yaml:ro
     networks:
       - observability-network
     deploy:

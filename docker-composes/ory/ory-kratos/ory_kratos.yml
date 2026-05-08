@@ -4,7 +4,7 @@ services:
     container_name: ory-kratos-migrate
     command: migrate sql up -e --yes --config /etc/kratos/kratos.yaml
     volumes:
-      - ./x/kratos.yaml:/etc/kratos/kratos.yaml:ro
+      - ./x/kratos.yml:/etc/kratos/kratos.yaml:ro
       - ./x/schemas:/etc/kratos/schemas:ro
     depends_on:
       ory-kratos-db:
@@ -20,7 +20,7 @@ services:
       - "4434:4434" # Admin API
     command: serve --config /etc/kratos/kratos.yaml --dev
     volumes:
-      - ./x/kratos.yaml:/etc/kratos/kratos.yaml:ro
+      - ./x/kratos.yml:/etc/kratos/kratos.yaml:ro
       - ./x/schemas:/etc/kratos/schemas:ro
     depends_on:
       ory-kratos-db:

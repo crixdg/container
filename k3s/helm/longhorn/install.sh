@@ -25,7 +25,7 @@ fi
 
 helm upgrade --install longhorn longhorn/longhorn \
   --version 1.9.0 \
-  -f "$SCRIPT_DIR/helm-values.yaml" \
+  -f "$SCRIPT_DIR/helm-values.yml" \
   -n storage-controller --create-namespace \
   --wait --timeout 5m
 

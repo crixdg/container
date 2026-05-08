@@ -1,5 +1,5 @@
 # CloudNativePG — Cluster CR
-# Applied with: kubectl apply -f helm-values.yaml -n postgres
+# Applied with: kubectl apply -f helm-values.yml -n postgres
 #
 # Single-node start: instances: 1 (no standby, no failover)
 # HA: bump to instances: 3 (1 primary + 2 standbys) — zero-downtime rolling change
