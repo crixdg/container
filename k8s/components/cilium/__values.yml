@@ -2259,7 +2259,7 @@ ipam:
     # @schema
     # -- IPv4 CIDR list range to delegate to individual nodes for IPAM.
     # ! Must match the pod CIDR configured in the cluster (k3s --cluster-cidr or kubeadm podSubnet)
-    clusterPoolIPv4PodCIDRList: [${POD_NETWORK_CIDR}]
+    clusterPoolIPv4PodCIDRList: ["${POD_NETWORK_CIDR}"]
     # -- IPv4 CIDR mask size to delegate to individual nodes for IPAM.
     clusterPoolIPv4MaskSize: 24
     # @schema
