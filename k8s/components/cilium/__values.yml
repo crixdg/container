@@ -9,6 +9,9 @@ cluster:
   # ! metrics/logs when multiple clusters share the same Prometheus or Hubble relay
   name: ${CLUSTER_NAME}
 
+# ! Replaces kube-proxy entirely with eBPF; safe only when kube-proxy is not running on the nodes
+kubeProxyReplacement: "true"
+
 # ! Ensures agents pick up config changes (e.g. policy updates) without manual restarts
 rollOutCiliumPods: true
 
@@ -45,7 +48,7 @@ hubble:
       enabled: true
       className: nginx
       hosts:
-        - hubble-ui.${API_SERVER_IP}.nip.io
+        - ${HUBBLE_UI_HOST}
 
 ipam:
   operator:
