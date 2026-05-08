@@ -21,7 +21,7 @@ resources:
 bgpControlPlane: # -- TODO -- doesn't work
   enabled: true
   secretsNamespace:
-    name: cni-plugin
+    name: cni-system
 
 cni:
   install: true
