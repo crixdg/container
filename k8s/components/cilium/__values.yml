@@ -9,19 +9,19 @@ cluster:
   # ! metrics/logs when multiple clusters share the same Prometheus or Hubble relay
   name: ${CLUSTER_NAME}
 
-# ! Replaces kube-proxy entirely with eBPF; safe only when kube-proxy is not running on the nodes
-kubeProxyReplacement: "true"
+# # ! Replaces kube-proxy entirely with eBPF; safe only when kube-proxy is not running on the nodes
+# kubeProxyReplacement: "true"
 
-socketLB:
-  # ! Enables socket-level load balancing via eBPF; required for kubeProxyReplacement to intercept traffic at the socket layer
-  enabled: true
+# socketLB:
+#   # ! Enables socket-level load balancing via eBPF; required for kubeProxyReplacement to intercept traffic at the socket layer
+#   enabled: true
 
-cgroup:
-  # ! Host already mounts cgroupv2 at /sys/fs/cgroup; disabling autoMount prevents Cilium from creating an isolated
-  # ! fresh cgroup2 mount (which would cause socketLB BPF programs to attach to the wrong hierarchy and never fire)
-  autoMount:
-    enabled: false
-  hostRoot: /sys/fs/cgroup
+# cgroup:
+#   # ! Host already mounts cgroupv2 at /sys/fs/cgroup; disabling autoMount prevents Cilium from creating an isolated
+#   # ! fresh cgroup2 mount (which would cause socketLB BPF programs to attach to the wrong hierarchy and never fire)
+#   autoMount:
+#     enabled: false
+#   hostRoot: /sys/fs/cgroup
 
 # ! Ensures agents pick up config changes (e.g. policy updates) without manual restarts
 rollOutCiliumPods: true
