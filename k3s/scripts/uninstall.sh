@@ -16,7 +16,7 @@ fi
 echo "k3s removed."
 
 echo "Cleaning up CNI artifacts ..."
-umount /run/cilium/cgroupv2 2>/dev/null || true
+umount /var/run/cilium/cgroupv2 2>/dev/null || true
 rm -rf /etc/cni/net.d
 rm -rf /opt/cni/bin
 rm -rf /var/run/cilium

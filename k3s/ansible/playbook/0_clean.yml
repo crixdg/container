@@ -74,11 +74,13 @@
     # ── Firewall — Rocky Linux 10 (firewalld) ───────────────────────────────────
     - name: Remove k3s firewalld rules (RedHat)
       shell: |
-        firewall-cmd --permanent --remove-port=6443/tcp  2>/dev/null || true
+        firewall-cmd --permanent --remove-port=6443/tcp     2>/dev/null || true
         firewall-cmd --permanent --remove-port=2379-2380/tcp 2>/dev/null || true
-        firewall-cmd --permanent --remove-port=8472/udp  2>/dev/null || true
-        firewall-cmd --permanent --remove-port=51820/udp 2>/dev/null || true
-        firewall-cmd --permanent --remove-port=10250/tcp 2>/dev/null || true
+        firewall-cmd --permanent --remove-port=8472/udp     2>/dev/null || true
+        firewall-cmd --permanent --remove-port=51820/udp    2>/dev/null || true
+        firewall-cmd --permanent --remove-port=10250/tcp    2>/dev/null || true
+        firewall-cmd --permanent --remove-port=4240/tcp     2>/dev/null || true
+        firewall-cmd --permanent --remove-port=4244/tcp     2>/dev/null || true
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
       ignore_errors: true
@@ -86,11 +88,13 @@
     # ── Firewall — Debian 13 (ufw) ───────────────────────────────────────────────
     - name: Remove k3s ufw rules (Debian)
       shell: |
-        ufw delete allow 6443/tcp   2>/dev/null || true
+        ufw delete allow 6443/tcp      2>/dev/null || true
         ufw delete allow 2379:2380/tcp 2>/dev/null || true
-        ufw delete allow 8472/udp   2>/dev/null || true
-        ufw delete allow 51820/udp  2>/dev/null || true
-        ufw delete allow 10250/tcp  2>/dev/null || true
+        ufw delete allow 8472/udp      2>/dev/null || true
+        ufw delete allow 51820/udp     2>/dev/null || true
+        ufw delete allow 10250/tcp     2>/dev/null || true
+        ufw delete allow 4240/tcp      2>/dev/null || true
+        ufw delete allow 4244/tcp      2>/dev/null || true
       when: ansible_os_family == "Debian"
       ignore_errors: true
 

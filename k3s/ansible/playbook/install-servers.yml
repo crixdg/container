@@ -46,6 +46,10 @@
             {% endfor %}
             {% endif %}
 
+          # Cilium replaces Flannel as the CNI.
+          flannel-backend: none
+          disable-network-policy: true
+
           disable:
             - traefik
             - servicelb
@@ -151,6 +155,10 @@
             - "{{ san | trim }}"
             {% endfor %}
             {% endif %}
+
+          # Cilium replaces Flannel as the CNI.
+          flannel-backend: none
+          disable-network-policy: true
 
           disable:
             - traefik

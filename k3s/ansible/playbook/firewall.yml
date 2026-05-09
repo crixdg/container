@@ -5,10 +5,12 @@
 #   6443  — API server (all nodes need to reach servers)
 #   2379  — etcd client (server-to-server only)
 #   2380  — etcd peer  (server-to-server only)
-#   8472  — VXLAN (Flannel overlay, all nodes)
+#   8472  — VXLAN (Flannel overlay — kept even when Flannel is disabled, harmless)
 #   51820 — WireGuard (if encryption enabled, all nodes)
 #   10250 — kubelet metrics (agents → servers)
 #   5001  — embedded registry mirror (optional)
+#   4240  — Cilium health checks (all nodes)
+#   4244  — Hubble gRPC (server nodes, for Hubble relay/UI)
 
 - name: Firewall — server nodes
   hosts: k3s_servers
@@ -32,6 +34,8 @@
         firewall-cmd --permanent --add-port=8472/udp
         firewall-cmd --permanent --add-port=51820/udp
         firewall-cmd --permanent --add-port=10250/tcp
+        firewall-cmd --permanent --add-port=4240/tcp
+        firewall-cmd --permanent --add-port=4244/tcp
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
 
@@ -58,6 +62,8 @@
         ufw allow 8472/udp
         ufw allow 51820/udp
         ufw allow 10250/tcp
+        ufw allow 4240/tcp
+        ufw allow 4244/tcp
       when: ansible_os_family == "Debian"
 
 - name: Firewall — agent nodes
@@ -80,6 +86,7 @@
         firewall-cmd --permanent --add-port=8472/udp
         firewall-cmd --permanent --add-port=51820/udp
         firewall-cmd --permanent --add-port=10250/tcp
+        firewall-cmd --permanent --add-port=4240/tcp
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
 
@@ -104,4 +111,5 @@
         ufw allow 8472/udp
         ufw allow 51820/udp
         ufw allow 10250/tcp
+        ufw allow 4240/tcp
       when: ansible_os_family == "Debian"
