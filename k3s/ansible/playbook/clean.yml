@@ -1,13 +1,15 @@
 ---
-# Completely remove k3s from all nodes.
+# Completely remove k3s and undo all preflight/firewall changes from all nodes.
 # WARNING: this destroys all cluster state and workloads.
 
 - name: Uninstall k3s from all nodes
   hosts: k3s_cluster
   become: true
-  gather_facts: false
+  gather_facts: true   # needed for OS-family checks below
 
   tasks:
+
+    # ── k3s binaries + data ─────────────────────────────────────────────────────
     - name: Run k3s server uninstall script
       shell: /usr/local/bin/k3s-uninstall.sh
       ignore_errors: true
@@ -16,20 +18,89 @@
       shell: /usr/local/bin/k3s-agent-uninstall.sh
       ignore_errors: true
 
-    - name: Remove k3s config file
+    - name: Remove rancher config directory
       file:
-        path: /etc/rancher/k3s/config.yaml
+        path: /etc/rancher
         state: absent
 
-    - name: Remove kernel module config
+    # ── Kernel modules ──────────────────────────────────────────────────────────
+    - name: Remove kernel module load config
       file:
         path: /etc/modules-load.d/k3s.conf
         state: absent
 
+    - name: Unload kernel modules
+      shell: |
+        modprobe -r br_netfilter || true
+        modprobe -r overlay      || true
+      changed_when: false
+
+    # ── Sysctl ──────────────────────────────────────────────────────────────────
     - name: Remove sysctl config
       file:
         path: /etc/sysctl.d/k3s.conf
         state: absent
 
+    - name: Re-apply sysctl (removes k3s params without reboot)
+      command: sysctl --system
+      changed_when: false
+
+    # ── Swap ────────────────────────────────────────────────────────────────────
+    - name: Re-enable swap entries in /etc/fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^# (.*[\s\t]swap[\s\t].*)$'
+        replace: '\1'
+
+    - name: Re-enable swap
+      command: swapon -a
+      changed_when: false
+      ignore_errors: true
+
+    # ── SELinux (RedHat only) ────────────────────────────────────────────────────
+    - name: Restore SELinux to enforcing (permanent)
+      replace:
+        path: /etc/selinux/config
+        regexp: "^SELINUX=permissive$"
+        replace: "SELINUX=enforcing"
+      when: ansible_os_family == "RedHat"
+      ignore_errors: true
+
+    - name: Restore SELinux to enforcing (temporary)
+      command: setenforce 1
+      when: ansible_os_family == "RedHat"
+      ignore_errors: true
+
+    # ── Firewall — Rocky Linux 10 (firewalld) ───────────────────────────────────
+    - name: Remove k3s firewalld rules (RedHat)
+      shell: |
+        firewall-cmd --permanent --remove-port=6443/tcp  2>/dev/null || true
+        firewall-cmd --permanent --remove-port=2379-2380/tcp 2>/dev/null || true
+        firewall-cmd --permanent --remove-port=8472/udp  2>/dev/null || true
+        firewall-cmd --permanent --remove-port=51820/udp 2>/dev/null || true
+        firewall-cmd --permanent --remove-port=10250/tcp 2>/dev/null || true
+        firewall-cmd --reload
+      when: ansible_os_family == "RedHat"
+      ignore_errors: true
+
+    # ── Firewall — Debian 13 (ufw) ───────────────────────────────────────────────
+    - name: Remove k3s ufw rules (Debian)
+      shell: |
+        ufw delete allow 6443/tcp   2>/dev/null || true
+        ufw delete allow 2379:2380/tcp 2>/dev/null || true
+        ufw delete allow 8472/udp   2>/dev/null || true
+        ufw delete allow 51820/udp  2>/dev/null || true
+        ufw delete allow 10250/tcp  2>/dev/null || true
+      when: ansible_os_family == "Debian"
+      ignore_errors: true
+
+    # ── iscsid ───────────────────────────────────────────────────────────────────
+    - name: Disable iscsid
+      systemd:
+        name: iscsid
+        enabled: false
+        state: stopped
+      ignore_errors: true
+
     - debug:
-        msg: "k3s removed from {{ inventory_hostname }}."
+        msg: "k3s fully removed from {{ inventory_hostname }}. Reboot recommended to clear residual kernel state."
