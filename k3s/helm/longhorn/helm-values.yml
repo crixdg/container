@@ -7,9 +7,8 @@
 # ready to switch away from local-path.
 
 defaultSettings:
-  # Replica count must not exceed the number of nodes that have storage.
-  # For a single-node cluster use 1; for 3+ nodes use 3.
-  defaultReplicaCount: 1
+  # 3 replicas across the 3 worker nodes — full redundancy.
+  defaultReplicaCount: 3
 
   # Reserve this fraction of each disk for the OS (0.25 = 25%)
   storageReservedPercentageForDefaultDisk: 25
@@ -24,7 +23,7 @@ defaultSettings:
 
 persistence:
   defaultClass: false   # keep local-path as default until you run set-default-storageclass.sh
-  defaultClassReplicaCount: 1
+  defaultClassReplicaCount: 3
 
 longhornUI:
   replicas: 1

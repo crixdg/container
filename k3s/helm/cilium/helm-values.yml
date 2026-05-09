@@ -1,0 +1,50 @@
+# Cilium — k3s values
+# Chart: cilium/cilium
+# Namespace: kube-system
+#
+# k3s prerequisites (already set in install-servers.yml):
+#   flannel-backend: none
+#   disable-network-policy: true
+#
+# Install:
+#   bash k3s/helm/cilium/install.sh <FIRST_SERVER_IP>
+
+# Point Cilium at the k3s API server.
+# Passed in by install.sh so this file stays version-controlled cleanly.
+# k8sServiceHost: set via --set in install.sh
+k8sServicePort: 6443
+
+# IPAM — must match CLUSTER_CIDR in group_vars/all.yml (default 10.42.0.0/16).
+ipam:
+  mode: cluster-pool
+  operator:
+    clusterPoolIPv4PodCIDRList:
+      - 10.42.0.0/16
+    clusterPoolIPv4MaskSize: 24
+
+# k3s ships kube-proxy; keep it — no full replacement needed.
+kubeProxyReplacement: "false"
+
+# Operator: 2 replicas spread across the 3 control-plane nodes.
+operator:
+  replicas: 2
+
+# Hubble observability.
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - hubble.example.com   # replace with your domain or nip.io address
+
+# Prometheus metrics (wire up to your monitoring stack if present).
+prometheus:
+  enabled: true
+
+# Roll out Cilium pods automatically on config changes.
+rollOutCiliumPods: true
