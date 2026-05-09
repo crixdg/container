@@ -65,6 +65,9 @@
             - "audit-log-maxbackup=3"
             - "audit-log-maxsize=100"
 
+          # Explicit empty taint list — control-plane nodes are schedulable.
+          node-taint: []
+
           kubelet-arg:
             - "eviction-hard=memory.available<{{ EVICTION_HARD_MEMORY }}"
             - "eviction-soft=memory.available<{{ EVICTION_SOFT_MEMORY }}"
@@ -86,6 +89,14 @@
       retries: 30
       delay: 5
       until: node_ready.stdout == "True"
+      changed_when: false
+
+    - name: Remove control-plane taint (ensure schedulable)
+      shell: |
+        kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml \
+          taint nodes {{ inventory_hostname }} \
+          node-role.kubernetes.io/control-plane:NoSchedule- \
+          --ignore-not-found
       changed_when: false
 
     - name: Fetch node-token
@@ -150,6 +161,9 @@
 
           etcd-expose-metrics: true
 
+          # Explicit empty taint list — control-plane nodes are schedulable.
+          node-taint: []
+
           kubelet-arg:
             - "eviction-hard=memory.available<{{ EVICTION_HARD_MEMORY }}"
             - "eviction-soft=memory.available<{{ EVICTION_SOFT_MEMORY }}"
@@ -172,5 +186,14 @@
       retries: 30
       delay: 5
       until: node_ready.stdout == "True"
+      changed_when: false
+      delegate_to: "{{ groups['k3s_servers'][0] }}"
+
+    - name: Remove control-plane taint (ensure schedulable)
+      shell: |
+        kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml \
+          taint nodes {{ inventory_hostname }} \
+          node-role.kubernetes.io/control-plane:NoSchedule- \
+          --ignore-not-found
       changed_when: false
       delegate_to: "{{ groups['k3s_servers'][0] }}"

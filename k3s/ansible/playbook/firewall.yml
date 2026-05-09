@@ -16,6 +16,15 @@
   gather_facts: true
 
   tasks:
+
+    # ── Rocky Linux 10 (firewalld) ───────────────────────────────────────────────
+    - name: Ensure firewalld is running (RedHat)
+      systemd:
+        name: firewalld
+        enabled: true
+        state: started
+      when: ansible_os_family == "RedHat"
+
     - name: Open server ports (firewalld)
       shell: |
         firewall-cmd --permanent --add-port=6443/tcp
@@ -25,6 +34,22 @@
         firewall-cmd --permanent --add-port=10250/tcp
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
+
+    # ── Debian 13 (ufw) ─────────────────────────────────────────────────────────
+    - name: Install ufw (Debian)
+      apt:
+        name: ufw
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Allow SSH before enabling ufw (Debian)
+      shell: ufw allow 22/tcp
+      when: ansible_os_family == "Debian"
+
+    - name: Enable ufw (Debian)
+      shell: ufw --force enable
+      when: ansible_os_family == "Debian"
 
     - name: Open server ports (ufw)
       shell: |
@@ -41,6 +66,15 @@
   gather_facts: true
 
   tasks:
+
+    # ── Rocky Linux 10 (firewalld) ───────────────────────────────────────────────
+    - name: Ensure firewalld is running (RedHat)
+      systemd:
+        name: firewalld
+        enabled: true
+        state: started
+      when: ansible_os_family == "RedHat"
+
     - name: Open agent ports (firewalld)
       shell: |
         firewall-cmd --permanent --add-port=8472/udp
@@ -48,6 +82,22 @@
         firewall-cmd --permanent --add-port=10250/tcp
         firewall-cmd --reload
       when: ansible_os_family == "RedHat"
+
+    # ── Debian 13 (ufw) ─────────────────────────────────────────────────────────
+    - name: Install ufw (Debian)
+      apt:
+        name: ufw
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Allow SSH before enabling ufw (Debian)
+      shell: ufw allow 22/tcp
+      when: ansible_os_family == "Debian"
+
+    - name: Enable ufw (Debian)
+      shell: ufw --force enable
+      when: ansible_os_family == "Debian"
 
     - name: Open agent ports (ufw)
       shell: |
