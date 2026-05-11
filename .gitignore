@@ -1,12 +1,1 @@
-.idea/
 .vscode/
-.project
-
-*.tgz
-.DS_Store
-Thumbs.db
-
-*.tmp.*
-*.log
-
-*.pat
