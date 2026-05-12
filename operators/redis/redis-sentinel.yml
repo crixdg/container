@@ -1,0 +1,50 @@
+# RedisSentinel CR — automatic failover for RedisReplication
+# Applied with: kubectl apply -f redis-sentinel.yml -n redis
+#
+# Sentinel monitors the RedisReplication set and promotes a replica when the
+# master is unreachable. Deploy alongside redis-replication.yml.
+# Clients connect to Sentinel (port 26379) to discover the current master.
+#
+# Requires: redis-operator installed, redis-replication.yml applied first
+
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisSentinel
+metadata:
+  name: redis-sentinel
+  namespace: redis
+spec:
+  clusterSize: 3  # must be odd; 3 is the minimum for quorum
+
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.15
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    # If RedisReplication uses a password, set the same secret here
+    # redisSecret:
+    #   name: redis-secret
+    #   key: password
+
+  # Enforce 1 sentinel pod per node — mirrors the replication pod spread
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: redis-sentinel
+          topologyKey: kubernetes.io/hostname
+
+  redisSentinelConfig:
+    redisReplicationName: redis-replication  # must match metadata.name in redis-replication.yml
+    masterGroupName: mymaster
+    redisPort: "6379"
+    sentinelPort: "26379"
+    quorum: "2"                   # majority of 3 sentinels
+    downAfterMilliseconds: "5000"
+    failoverTimeout: "180000"
+    parallelSyncs: "1"            # only 1 replica syncs from new master at a time

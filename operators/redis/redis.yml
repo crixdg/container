@@ -1,0 +1,61 @@
+# Redis standalone CR — single-node, no replication
+# Applied with: kubectl apply -f redis.yml -n redis
+#
+# Use this for dev / single-node environments.
+# For HA (1 master + 2 replicas), use redis-replication.yml instead.
+#
+# Requires: redis-operator installed in redis-operator namespace
+
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: Redis
+metadata:
+  name: redis
+  namespace: redis
+spec:
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.15
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    # Uncomment to enable password auth (create secret first — see install.sh)
+    # redisSecret:
+    #   name: redis-secret
+    #   key: password
+
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: longhorn
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+
+  redisExporter:
+    enabled: false  # set true when kube-prometheus-stack is installed
+    image: quay.io/opstree/redis-exporter:v1.44.0
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+  readinessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
