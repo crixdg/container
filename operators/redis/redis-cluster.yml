@@ -37,7 +37,6 @@ spec:
     #   key: password
 
   redisLeader:
-    replicas: 1  # followers per leader shard; set 0 if nodes are too tight
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
@@ -47,7 +46,6 @@ spec:
             topologyKey: kubernetes.io/hostname
 
   redisFollower:
-    replicas: 1
     affinity:
       podAntiAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
