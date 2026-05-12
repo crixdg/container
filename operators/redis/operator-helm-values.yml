@@ -1,0 +1,17 @@
+# redis-operator Helm values
+# Chart: ot-helm/redis-operator
+# Install: helm upgrade --install redis-operator ot-helm/redis-operator -f operator-helm-values.yml -n redis-operator --create-namespace
+#
+# The operator runs cluster-wide — one install covers all namespaces.
+
+redisOperator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+metrics:
+  enabled: true  # exposes /metrics on :8080 for Prometheus scraping

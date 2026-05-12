@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Redis Operator (ot-container-kit) — operator install + CR apply
+#
+# Usage:
+#   ./install.sh                   # standalone Redis (single-node)
+#   REDIS_MODE=replication ./install.sh  # RedisReplication + RedisSentinel (HA)
+#
+# Optional env vars:
+#   REDIS_PASSWORD  — if set, creates a redis-secret in the redis namespace
+#   REDIS_MODE      — "standalone" (default) or "replication"
+
+set -e
+
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+REDIS_MODE="${REDIS_MODE:-standalone}"
+OPERATOR_NAMESPACE="redis-operator"
+NAMESPACE="redis"
+
+# 1. Install the operator via Helm (idempotent)
+helm repo add ot-helm https://ot-container-kit.github.io/helm-charts 2>/dev/null || true
+helm repo update ot-helm
+
+helm upgrade --install redis-operator ot-helm/redis-operator \
+  -f "$SCRIPT_DIR/operator-helm-values.yml" \
+  -n "$OPERATOR_NAMESPACE" \
+  --create-namespace \
+  --wait
+
+echo "Operator ready in namespace: $OPERATOR_NAMESPACE"
+
+# 2. Create the redis namespace
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+# 3. Optionally create password secret
+if [ -n "$REDIS_PASSWORD" ]; then
+  kubectl create secret generic redis-secret \
+    --from-literal=password="$REDIS_PASSWORD" \
+    -n "$NAMESPACE" \
+    --dry-run=client -o yaml | kubectl apply -f -
+  echo "Secret redis-secret created/updated in namespace: $NAMESPACE"
+  echo "Remember to uncomment redisSecret in the CR YAML."
+fi
+
+# 4. Apply the Redis CR
+case "$REDIS_MODE" in
+  replication)
+    kubectl apply -f "$SCRIPT_DIR/redis-replication.yml" -n "$NAMESPACE"
+    kubectl apply -f "$SCRIPT_DIR/redis-sentinel.yml" -n "$NAMESPACE"
+    echo "RedisReplication + RedisSentinel applied."
+    echo "Watch status: kubectl get redisreplication,redissentinel -n $NAMESPACE"
+    echo "Master discovery (once running): redis-cli -p 26379 -h <sentinel-svc> sentinel get-master-addr-by-name mymaster"
+    ;;
+  standalone|*)
+    kubectl apply -f "$SCRIPT_DIR/redis.yml" -n "$NAMESPACE"
+    echo "Redis standalone applied."
+    echo "Watch status: kubectl get redis -n $NAMESPACE"
+    echo "Connect: kubectl exec -it redis-0 -n $NAMESPACE -- redis-cli ping"
+    ;;
+esac

@@ -1,0 +1,76 @@
+# RedisReplication CR — 1 master + 2 replicas
+# Applied with: kubectl apply -f redis-replication.yml -n redis
+#
+# Promotes a replica to master automatically on failure (when paired with RedisSentinel).
+# Scale: bump clusterSize to 5 (1 master + 4 replicas) — operator handles rolling change.
+#
+# Requires: redis-operator installed in redis-operator namespace
+
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisReplication
+metadata:
+  name: redis-replication
+  namespace: redis
+spec:
+  clusterSize: 3  # 1 master + 2 replicas; bump to 5 for more read replicas
+
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.15
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1
+        memory: 1Gi
+    # Uncomment to enable password auth (create secret first — see install.sh)
+    # redisSecret:
+    #   name: redis-secret
+    #   key: password
+
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: longhorn
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+
+  redisExporter:
+    enabled: false  # set true when kube-prometheus-stack is installed
+    image: quay.io/opstree/redis-exporter:v1.44.0
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+  # Enforce 1 replication pod per node — required for the co-located sentinel layout
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: redis-replication
+          topologyKey: kubernetes.io/hostname
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2  # never take down more than 1 pod at a time
+
+  livenessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5
+
+  readinessProbe:
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 5

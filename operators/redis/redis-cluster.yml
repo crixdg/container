@@ -1,0 +1,78 @@
+# RedisCluster CR — 3 masters, 1 follower per master (6 pods total)
+# Applied with: kubectl apply -f redis-cluster.yml -n redis
+#
+# Use this when a single master's write throughput is saturated.
+# Data is sharded across 3 masters via 16384 hash slots (~5461 slots per master).
+# Each master has 1 follower for read scaling and failover.
+#
+# Node layout with podAntiAffinity (requiredDuringScheduling on hostname):
+#   Node A: redis-cluster-leader-0   redis-cluster-follower-0
+#   Node B: redis-cluster-leader-1   redis-cluster-follower-1
+#   Node C: redis-cluster-leader-2   redis-cluster-follower-2
+#
+# Requires: redis-operator installed in redis-operator namespace
+
+apiVersion: redis.redis.opstreelabs.in/v1beta2
+kind: RedisCluster
+metadata:
+  name: redis-cluster
+  namespace: redis
+spec:
+  clusterSize: 3        # number of master shards
+  clusterVersion: v7
+
+  kubernetesConfig:
+    image: quay.io/opstree/redis:v7.0.15
+    imagePullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1
+        memory: 1Gi
+    # Uncomment to enable password auth
+    # redisSecret:
+    #   name: redis-secret
+    #   key: password
+
+  redisLeader:
+    replicas: 1  # followers per leader shard; set 0 if nodes are too tight
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: redis-cluster-leader
+            topologyKey: kubernetes.io/hostname
+
+  redisFollower:
+    replicas: 1
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: redis-cluster-follower
+            topologyKey: kubernetes.io/hostname
+
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: longhorn
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+
+  redisExporter:
+    enabled: false  # set true when kube-prometheus-stack is installed
+    image: quay.io/opstree/redis-exporter:v1.44.0
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
