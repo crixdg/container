@@ -11,9 +11,6 @@ services:
             local:
               properties:
                 bootstrap.servers: "kafka:9093"
-    depends_on:
-      kafka:
-        condition: service_healthy
     networks:
       - kafka_net
 
