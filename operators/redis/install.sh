@@ -5,15 +5,16 @@
 # Usage:
 #   ./install.sh                   # standalone Redis (single-node)
 #   REDIS_MODE=replication ./install.sh  # RedisReplication + RedisSentinel (HA)
+#   REDIS_MODE=cluster ./install.sh      # RedisCluster (3 masters, 1 follower each)
 #
 # Optional env vars:
 #   REDIS_PASSWORD  — if set, creates a redis-secret in the redis namespace
-#   REDIS_MODE      — "standalone" (default) or "replication"
+#   REDIS_MODE      — "standalone" (default), "replication", or "cluster"
 
 set -e
 
-SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 REDIS_MODE="${REDIS_MODE:-standalone}"
 OPERATOR_NAMESPACE="redis-operator"
 NAMESPACE="redis"
@@ -24,9 +25,7 @@ helm repo update ot-helm
 
 helm upgrade --install redis-operator ot-helm/redis-operator \
   -f "$SCRIPT_DIR/operator-helm-values.yml" \
-  -n "$OPERATOR_NAMESPACE" \
-  --create-namespace \
-  --wait
+  -n "$OPERATOR_NAMESPACE" --create-namespace --wait
 
 echo "Operator ready in namespace: $OPERATOR_NAMESPACE"
 
@@ -51,6 +50,12 @@ case "$REDIS_MODE" in
     echo "RedisReplication + RedisSentinel applied."
     echo "Watch status: kubectl get redisreplication,redissentinel -n $NAMESPACE"
     echo "Master discovery (once running): redis-cli -p 26379 -h <sentinel-svc> sentinel get-master-addr-by-name mymaster"
+    ;;
+  cluster)
+    kubectl apply -f "$SCRIPT_DIR/redis-cluster.yml" -n "$NAMESPACE"
+    echo "RedisCluster applied (3 masters, 1 follower each — 6 pods total)."
+    echo "Watch status: kubectl get rediscluster -n $NAMESPACE"  # cspell:ignore rediscluster
+    echo "Connect: kubectl exec -it redis-cluster-leader-0 -n $NAMESPACE -- redis-cli -c -p 6379 cluster info"
     ;;
   standalone|*)
     kubectl apply -f "$SCRIPT_DIR/redis.yml" -n "$NAMESPACE"
