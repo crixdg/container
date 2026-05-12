@@ -23,7 +23,7 @@ services:
     networks:
       - kafka_net
     healthcheck:
-      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9093"]
       interval: 10s
       timeout: 5s
       retries: 5
