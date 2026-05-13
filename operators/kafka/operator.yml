@@ -8,10 +8,10 @@
 resources:
   requests:
     cpu: 200m
-    memory: 256Mi
+    memory: 384Mi
   limits:
-    cpu: 1
-    memory: 512Mi
+    cpu: 1000m
+    memory: 384Mi
 
 # Limit to the kafka namespace; set watchAnyNamespace: true to manage cluster-wide
 watchNamespaces:

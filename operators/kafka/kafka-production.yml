@@ -8,7 +8,7 @@
 #
 # Requires: strimzi-kafka-operator installed in kafka-operator namespace
 
-# ── Controller node pool ────────────────────────────────────────────────────
+# Controller node pool
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaNodePool
 metadata:
@@ -46,7 +46,7 @@ spec:
               topologyKey: kubernetes.io/hostname
 
 ---
-# ── Broker node pool ─────────────────────────────────────────────────────────
+# Broker node pool
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaNodePool
 metadata:
@@ -84,7 +84,7 @@ spec:
               topologyKey: kubernetes.io/hostname
 
 ---
-# ── Kafka cluster ─────────────────────────────────────────────────────────────
+# kafka cluster
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
@@ -95,8 +95,8 @@ metadata:
     strimzi.io/kraft: enabled
 spec:
   kafka:
-    version: 3.9.0
-    metadataVersion: 3.9-IV0
+    version: 4.2.0
+    metadataVersion: 4.2-IV0
     listeners:
       - name: plain
         port: 9092
@@ -129,7 +129,7 @@ spec:
       log.retention.hours: 168
       log.segment.bytes: 1073741824
       log.retention.check.interval.ms: 300000
-      inter.broker.protocol.version: "3.9"
+      inter.broker.protocol.version: "4.2"
   entityOperator:
     topicOperator: {}
     userOperator: {}
