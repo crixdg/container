@@ -1,0 +1,58 @@
+# CloudNativePG 3-instance Cluster CR (HA, production)
+# Applied with: kubectl apply -f postgres-ha.yml -n postgres
+#
+# 1 primary + 2 synchronous standbys. Automatic failover handled by CNPG.
+# Use postgres.yml for single-instance dev instead.
+#
+# Requires:
+#   - cnpg operator installed in cnpg-system namespace
+#   - Secret "postgres-app-password" with key "password" in postgres namespace
+
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+        name: postgres-app-password
+
+  # Keep 1 synchronous replica — guarantees no data loss on primary failure
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+
+  storage:
+    storageClass: longhorn
+    size: 50Gi
+
+  walStorage:
+    storageClass: longhorn
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "1GB"
+      effective_cache_size: "3GB"
+      wal_level: logical
+      max_wal_senders: "10"
+      max_replication_slots: "10"
+
+  # Keep 3 daily base backups (WAL archiving wired separately via a Scheduled Backup CR)
+  backup:
+    retentionPolicy: "3d"

@@ -1,0 +1,17 @@
+# CloudNativePG Operator Helm values
+# Chart: cnpg/cloudnative-pg
+# Install: helm upgrade --install cnpg cnpg/cloudnative-pg \
+#            -f operator.yml -n cnpg-system --create-namespace
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Restrict operator to the postgres namespace; omit to watch cluster-wide
+config:
+  data:
+    WATCH_NAMESPACE: "postgres"
