@@ -13,11 +13,16 @@ metadata:
   namespace: redis
 data:
   redis-additional.conf: |
-    maxmemory 400mb # keeps usage below the 512Mi limit
-    maxmemory-policy allkeys-lru # evicts least-recently-used keys when full
-    appendonly no # disables AOF (storage-backed persistence is handled by the PVC)
-    tcp-keepalive 60 # keep-alive for TCP connections for 1 minute
-    timeout 300 # close idle connections after 5 minutes
+    # keeps usage below the 512Mi limit
+    maxmemory 400mb
+    # evicts least-recently-used keys when full
+    maxmemory-policy allkeys-lru
+    # disables AOF (storage-backed persistence is handled by the PVC)
+    appendonly no
+    # keep-alive for TCP connections for 1 minute
+    tcp-keepalive 60
+    # close idle connections after 5 minutes
+    timeout 300
 
 ---
 apiVersion: redis.redis.opstreelabs.in/v1beta2
