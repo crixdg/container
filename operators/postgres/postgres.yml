@@ -5,7 +5,7 @@
 #
 # Requires:
 #   - cnpg operator installed in cnpg-system namespace
-#   - Secret "postgres-app-password" with key "password" in postgres namespace
+#   - Secret "postgres-app-password" with key "password" in the postgres namespace
 
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
@@ -18,9 +18,10 @@ spec:
 
   bootstrap:
     initdb:
-      database: app # default database to create
+      database: app
+      owner: pg-admin
       secret:
-        name: postgres-app-password # Secret with username and password for the default user
+        name: postgres-app-password
 
   storage:
     storageClass: longhorn
