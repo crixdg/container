@@ -16,14 +16,13 @@ spec:
   clusterSize: 3  # must be odd; 3 is the minimum for quorum
 
   kubernetesConfig:
-    image: quay.io/opstree/redis:v7.0.15
+    image: quay.io/opstree/redis:v8.6.1
     imagePullPolicy: IfNotPresent
     resources:
       requests:
         cpu: 50m
         memory: 128Mi
       limits:
-        cpu: 200m
         memory: 256Mi
     # If RedisReplication uses a password, set the same secret here
     # redisSecret:

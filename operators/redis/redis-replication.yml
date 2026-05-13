@@ -15,14 +15,13 @@ spec:
   clusterSize: 3  # 1 master + 2 replicas; bump to 5 for more read replicas
 
   kubernetesConfig:
-    image: quay.io/opstree/redis:v7.0.15
+    image: quay.io/opstree/redis:v8.6.1
     imagePullPolicy: IfNotPresent
     resources:
       requests:
         cpu: 200m
         memory: 512Mi
       limits:
-        cpu: 1
         memory: 1Gi
     # Uncomment to enable password auth (create secret first — see install.sh)
     # redisSecret:
@@ -41,7 +40,7 @@ spec:
 
   redisExporter:
     enabled: false  # set true when kube-prometheus-stack is installed
-    image: quay.io/opstree/redis-exporter:v1.44.0
+    image: quay.io/opstree/redis-exporter:v1.83.0
     resources:
       requests:
         cpu: 50m
