@@ -8,6 +8,7 @@
 #
 # Optional env vars:
 #   POSTGRES_MODE      — "standalone" (default) or "ha"
+#   POSTGRES_USER      — app username (default: app)
 #   POSTGRES_PASSWORD  — app user password; required on first install
 
 set -e
@@ -15,6 +16,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 POSTGRES_MODE="${POSTGRES_MODE:-standalone}"
+POSTGRES_USER="${POSTGRES_USER:-app}"
 OPERATOR_NAMESPACE="cnpg-system"
 NAMESPACE="postgres"
 
@@ -42,6 +44,7 @@ kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -
 # 3. Create app user password secret
 if [ -n "$POSTGRES_PASSWORD" ]; then
   kubectl create secret generic postgres-app-password \
+    --from-literal=username="$POSTGRES_USER" \
     --from-literal=password="$POSTGRES_PASSWORD" \
     -n "$NAMESPACE" \
     --dry-run=client -o yaml | kubectl apply -f -
@@ -63,6 +66,7 @@ case "$POSTGRES_MODE" in
     echo "PostgreSQL standalone applied."
     echo "Watch status:  kubectl get cluster -n $NAMESPACE"
     echo "Service:       postgres-rw.$NAMESPACE.svc.cluster.local:5432"
+    echo "External:      <NODE-IP>:30432"
     echo "Connect:       kubectl cnpg psql postgres -n $NAMESPACE"
     ;;
 esac
