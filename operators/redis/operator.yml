@@ -2,9 +2,11 @@
 # Chart: ot-helm/redis-operator
 # Install: helm upgrade --install redis-operator ot-helm/redis-operator -f operator.yml -n redis-operator --create-namespace
 #
-# The operator runs cluster-wide — one install covers all namespaces.
+# watchNamespaces limits the operator to reconcile CRs only in the listed namespaces.
+# Leave empty ("") or omit to watch cluster-wide.
 
 redisOperator:
+  watchNamespace: "redis"
   resources:
     requests:
       cpu: 100m
