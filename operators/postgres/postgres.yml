@@ -18,10 +18,9 @@ spec:
 
   bootstrap:
     initdb:
-      database: app
-      owner: app
+      database: app # default database to create
       secret:
-        name: postgres-app-password
+        name: postgres-app-password # Secret with username and password for the default user
 
   storage:
     storageClass: longhorn
@@ -32,7 +31,7 @@ spec:
       cpu: 200m
       memory: 256Mi
     limits:
-      cpu: 1000m
+      cpu: 1
       memory: 1Gi
 
   postgresql:
@@ -41,3 +40,20 @@ spec:
       shared_buffers: "128MB"
       effective_cache_size: "512MB"
       wal_level: logical
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-external
+  namespace: postgres
+spec:
+  type: NodePort
+  selector:
+    cnpg.io/cluster: postgres
+    cnpg.io/instanceRole: primary
+  ports:
+    - port: 5432
+      targetPort: 5432
+      nodePort: 30432
+      protocol: TCP
