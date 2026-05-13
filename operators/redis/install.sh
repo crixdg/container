@@ -24,7 +24,7 @@ helm repo add ot-helm https://ot-container-kit.github.io/helm-charts 2>/dev/null
 helm repo update ot-helm
 
 helm upgrade --install redis-operator ot-helm/redis-operator \
-  -f "$SCRIPT_DIR/operator-helm-values.yml" \
+  -f "$SCRIPT_DIR/operator.yml" \
   -n "$OPERATOR_NAMESPACE" --create-namespace --wait
 
 echo "Operator ready in namespace: $OPERATOR_NAMESPACE"
