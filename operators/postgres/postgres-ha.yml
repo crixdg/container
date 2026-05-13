@@ -15,7 +15,7 @@ metadata:
   namespace: postgres
 spec:
   instances: 3
-  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
 
   bootstrap:
     initdb:
