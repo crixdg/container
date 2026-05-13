@@ -42,6 +42,7 @@ kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -
 # 3. Create app user password secret
 if [ -n "$POSTGRES_PASSWORD" ]; then
   kubectl create secret generic postgres-app-password \
+    --from-literal=username="pg-admin" \
     --from-literal=password="$POSTGRES_PASSWORD" \
     -n "$NAMESPACE" \
     --dry-run=client -o yaml | kubectl apply -f -
