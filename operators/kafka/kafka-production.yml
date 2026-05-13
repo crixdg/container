@@ -1,0 +1,145 @@
+# Kafka production CR — 3 controllers + 3 brokers (KRaft, no ZooKeeper)
+# Applied with: kubectl apply -f kafka-production.yml
+#
+# Node layout (podAntiAffinity on hostname):
+#   Each controller and broker pod is scheduled on a distinct node.
+#   Controllers are dedicated metadata quorum nodes (no user traffic).
+#   Brokers handle all client I/O and expose NodePorts 32094-32096 externally.
+#
+# Requires: strimzi-kafka-operator installed in kafka-operator namespace
+
+# ── Controller node pool ────────────────────────────────────────────────────
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: controller
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  replicas: 3
+  roles:
+    - controller
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 8Gi
+        class: longhorn
+        deleteClaim: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+  template:
+    pod:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  strimzi.io/pool-name: controller
+              topologyKey: kubernetes.io/hostname
+
+---
+# ── Broker node pool ─────────────────────────────────────────────────────────
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: broker
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  replicas: 3
+  roles:
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 30Gi
+        class: longhorn
+        deleteClaim: true
+  resources:
+    requests:
+      cpu: 1
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+  template:
+    pod:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  strimzi.io/pool-name: broker
+              topologyKey: kubernetes.io/hostname
+
+---
+# ── Kafka cluster ─────────────────────────────────────────────────────────────
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: kafka
+  namespace: kafka
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    version: 3.9.0
+    metadataVersion: 3.9-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: internal
+        port: 9094
+        type: internal
+        tls: false
+      - name: external
+        port: 9095
+        type: nodeport
+        tls: false
+        configuration:
+          bootstrap:
+            nodePort: 32090
+          brokers:
+            - broker: 0
+              nodePort: 32094
+            - broker: 1
+              nodePort: 32095
+            - broker: 2
+              nodePort: 32096
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      log.retention.hours: 168
+      log.segment.bytes: 1073741824
+      log.retention.check.interval.ms: 300000
+      inter.broker.protocol.version: "3.9"
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

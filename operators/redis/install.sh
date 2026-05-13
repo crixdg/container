@@ -8,8 +8,8 @@
 #   REDIS_MODE=cluster ./install.sh      # RedisCluster (3 masters, 1 follower each)
 #
 # Optional env vars:
-#   REDIS_PASSWORD  — if set, creates a redis-secret in the redis namespace
-#   REDIS_MODE      — "standalone" (default), "replication", or "cluster"
+#   REDIS_PASSWORD  -- if set, creates a redis-secret in the redis namespace
+#   REDIS_MODE      -- "standalone" (default), "replication", or "cluster"
 
 set -e
 
@@ -20,7 +20,7 @@ OPERATOR_NAMESPACE="redis-operator"
 NAMESPACE="redis"
 
 # 1. Install the operator via Helm (idempotent)
-helm repo add ot-helm https://ot-container-kit.github.io/helm-charts 2>/dev/null || true
+helm repo add ot-helm https://ot-container-kit.github.io/helm-charts --force-update
 helm repo update ot-helm
 
 helm upgrade --install redis-operator ot-helm/redis-operator \

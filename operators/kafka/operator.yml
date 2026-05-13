@@ -1,0 +1,20 @@
+# Strimzi Kafka Operator Helm values
+# Chart: strimzi/strimzi-kafka-operator
+# Install: helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
+#            -f operator.yml -n kafka-operator --create-namespace
+#
+# The operator runs cluster-wide — one install covers all namespaces.
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1
+    memory: 512Mi
+
+# Limit to the kafka namespace; set watchAnyNamespace: true to manage cluster-wide
+watchNamespaces:
+  - kafka
+
+logLevel: INFO
