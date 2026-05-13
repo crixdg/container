@@ -21,14 +21,18 @@ NAMESPACE="kafka"
 helm repo add strimzi https://strimzi.io/charts 2>/dev/null || true
 helm repo update strimzi
 
+# 2. Create the kafka namespace first (operator watchNamespaces needs it to exist)
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
   -f "$SCRIPT_DIR/operator.yml" \
   -n "$OPERATOR_NAMESPACE" --create-namespace --wait
 
 echo "Operator ready in namespace: $OPERATOR_NAMESPACE"
 
-# 2. Create the kafka namespace
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+# Wait for Strimzi CRDs to be established then flush kubectl discovery cache
+kubectl wait --for=condition=Established crd/kafkas.kafka.strimzi.io crd/kafkanodepools.kafka.strimzi.io --timeout=60s
+rm -rf "${HOME}/.kube/cache/discovery/"
 
 # 3. Apply the Kafka CR
 case "$KAFKA_MODE" in
