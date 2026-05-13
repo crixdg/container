@@ -1,0 +1,19 @@
+# MongoDB Community Kubernetes Operator Helm values
+# Chart: mongodb/community-operator
+# Install: helm upgrade --install mongodb-community-operator mongodb/community-operator \
+#            -f operator.yml -n mongodb-operator --create-namespace
+#
+# watchNamespace limits the operator to reconcile CRs only in the listed namespace.
+# Set to "" to watch cluster-wide.
+
+operator:
+  watchNamespace: "mongodb"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# Community operator manages its own MongoDBCommunity CRDs — no separate CRD install needed

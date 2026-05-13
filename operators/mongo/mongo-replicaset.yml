@@ -1,0 +1,72 @@
+# MongoDB Community 3-member ReplicaSet CR (HA, production)
+# Applied with: kubectl apply -f mongo-replicaset.yml -n mongodb
+#
+# Runs a primary + 2 secondaries across 3 pods.
+# Use mongo.yml for single-node dev instead.
+#
+# Requires:
+#   - mongodb-community-operator installed in mongodb-operator namespace
+#   - Secret "mongo-admin-password" with key "password" in mongodb namespace
+
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: mongo
+  namespace: mongodb
+spec:
+  members: 3
+  type: ReplicaSet
+  version: "8.3.0"
+
+  security:
+    authentication:
+      modes: ["SCRAM"]
+
+  users:
+    - name: admin
+      db: admin
+      passwordSecretRef:
+        name: mongo-admin-password
+      roles:
+        - name: clusterAdmin
+          db: admin
+        - name: userAdminAnyDatabase
+          db: admin
+        - name: readWriteAnyDatabase
+          db: admin
+      scramCredentialsSecretName: mongo-admin-scram
+
+  statefulSet:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mongod
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 1500m
+                  memory: 2Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            storageClassName: longhorn
+            resources:
+              requests:
+                storage: 50Gi
+        - metadata:
+            name: logs-volume
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            storageClassName: longhorn
+            resources:
+              requests:
+                storage: 5Gi
+
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib
+    replication.oplogSizeMB: 1024

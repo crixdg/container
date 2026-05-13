@@ -1,0 +1,71 @@
+# MongoDB Community single-node CR (1-member ReplicaSet, dev)
+# Applied with: kubectl apply -f mongo.yml -n mongodb
+#
+# MCK always runs a ReplicaSet; members: 1 gives a cost-free single node.
+# For HA (3 members), use mongo-replicaset.yml instead.
+#
+# Requires:
+#   - mongodb-community-operator installed in mongodb-operator namespace
+#   - Secret "mongo-admin-password" with key "password" in mongodb namespace
+
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: mongo
+  namespace: mongodb
+spec:
+  members: 1
+  type: ReplicaSet
+  version: "8.3.0"
+
+  security:
+    authentication:
+      modes: ["SCRAM"]
+
+  users:
+    - name: admin
+      db: admin
+      passwordSecretRef:
+        name: mongo-admin-password
+      roles:
+        - name: clusterAdmin
+          db: admin
+        - name: userAdminAnyDatabase
+          db: admin
+        - name: readWriteAnyDatabase
+          db: admin
+      scramCredentialsSecretName: mongo-admin-scram
+
+  statefulSet:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mongod
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+      volumeClaimTemplates:
+        - metadata:
+            name: data-volume
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            storageClassName: longhorn
+            resources:
+              requests:
+                storage: 10Gi
+        - metadata:
+            name: logs-volume
+          spec:
+            accessModes: ["ReadWriteOnce"]
+            storageClassName: longhorn
+            resources:
+              requests:
+                storage: 2Gi
+
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib

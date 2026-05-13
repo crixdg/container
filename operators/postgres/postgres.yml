@@ -1,0 +1,43 @@
+# CloudNativePG single-instance Cluster CR (dev)
+# Applied with: kubectl apply -f postgres.yml -n postgres
+#
+# 1 instance = primary only, no standbys. For HA (1 primary + 2 standbys), use postgres-ha.yml.
+#
+# Requires:
+#   - cnpg operator installed in cnpg-system namespace
+#   - Secret "postgres-app-password" with key "password" in postgres namespace
+
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      secret:
+        name: postgres-app-password
+
+  storage:
+    storageClass: longhorn
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "128MB"
+      effective_cache_size: "512MB"
+      wal_level: logical
