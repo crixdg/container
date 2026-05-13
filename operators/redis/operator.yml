@@ -1,6 +1,6 @@
 # redis-operator Helm values
 # Chart: ot-helm/redis-operator
-# Install: helm upgrade --install redis-operator ot-helm/redis-operator -f operator-helm-values.yml -n redis-operator --create-namespace
+# Install: helm upgrade --install redis-operator ot-helm/redis-operator -f operator.yml -n redis-operator --create-namespace
 #
 # The operator runs cluster-wide — one install covers all namespaces.
 
