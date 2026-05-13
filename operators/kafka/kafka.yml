@@ -6,7 +6,7 @@
 #
 # Requires: strimzi-kafka-operator installed in kafka-operator namespace
 
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
   name: combined
@@ -35,7 +35,7 @@ spec:
       memory: 2Gi
 
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: kafka

@@ -9,7 +9,7 @@
 # Requires: strimzi-kafka-operator installed in kafka-operator namespace
 
 # Controller node pool
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
   name: controller
@@ -47,7 +47,7 @@ spec:
 
 ---
 # Broker node pool
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
   name: broker
@@ -85,7 +85,7 @@ spec:
 
 ---
 # kafka cluster
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: kafka
