@@ -33,16 +33,16 @@ echo "==> Adding MongoDB Helm repo..."
 helm repo add mongodb https://mongodb.github.io/helm-charts 2>/dev/null || true
 helm repo update mongodb
 
+# 2. Create the mongodb namespace
+echo "==> Creating namespace: $NAMESPACE"
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 echo "==> Installing mongodb-community-operator..."
 helm upgrade --install mongodb-community-operator mongodb/community-operator \
   -f "$SCRIPT_DIR/operator.yml" \
   -n "$OPERATOR_NAMESPACE" --create-namespace --wait
 
 echo "==> Operator ready in namespace: $OPERATOR_NAMESPACE"
-
-# 2. Create the mongodb namespace
-echo "==> Creating namespace: $NAMESPACE"
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 # 3. Create admin password secret
 if [ -n "${MONGO_PASSWORD:-}" ]; then
