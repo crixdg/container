@@ -1,0 +1,7 @@
+# charts/backend/values.yaml
+namespace: ns-backend
+image: hashicorp/http-echo
+args:
+  - "-text=hello from backend"
+  - "-listen=:5678"
+port: 5678

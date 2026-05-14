@@ -1,0 +1,3 @@
+# charts/frontend/values.yaml
+namespace: ns-frontend
+backendUrl: "http://backend.ns-backend.svc.cluster.local:5678"

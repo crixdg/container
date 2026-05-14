@@ -1,14 +1,13 @@
-# Kafka production CR — 3 controllers + 3 brokers (KRaft, no ZooKeeper)
-# Applied with: kubectl apply -f kafka-production.yml
+# Kafka production HA — 3 dedicated controllers + 3 brokers (KRaft, no ZooKeeper)
 #
-# Node layout (podAntiAffinity on hostname):
-#   Each controller and broker pod is scheduled on a distinct node.
-#   Controllers are dedicated metadata quorum nodes (no user traffic).
-#   Brokers handle all client I/O and expose NodePorts 32094-32096 externally.
+# Node layout:
+#   Controllers: dedicated metadata quorum, no user traffic, anti-affinity per hostname
+#   Brokers: handle all client I/O, exposed via NodePorts 32094-32096 externally
 #
-# Requires: strimzi-kafka-operator installed in kafka-operator namespace
+# Apply: kubectl apply -f kafka-production.yml
+# Requires: strimzi-kafka-operator running in kafka-operator namespace
 
-# Controller node pool
+# --- Controller node pool ---
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
@@ -27,6 +26,7 @@ spec:
         type: persistent-claim
         size: 8Gi
         class: longhorn
+        kraftMetadata: shared
         deleteClaim: true
   resources:
     requests:
@@ -46,7 +46,7 @@ spec:
               topologyKey: kubernetes.io/hostname
 
 ---
-# Broker node pool
+# --- Broker node pool ---
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
@@ -65,6 +65,7 @@ spec:
         type: persistent-claim
         size: 30Gi
         class: longhorn
+        kraftMetadata: shared
         deleteClaim: true
   resources:
     requests:
@@ -84,30 +85,27 @@ spec:
               topologyKey: kubernetes.io/hostname
 
 ---
-# kafka cluster
+# --- Kafka cluster ---
 apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: kafka
   namespace: kafka
-  annotations:
-    strimzi.io/node-pools: enabled
-    strimzi.io/kraft: enabled
 spec:
   kafka:
     version: 4.2.0
-    metadataVersion: 4.2-IV0
+    metadataVersion: 4.2-IV1
     listeners:
       - name: plain
         port: 9092
         type: internal
         tls: false
       - name: internal
-        port: 9094
+        port: 9093
         type: internal
         tls: false
       - name: external
-        port: 9095
+        port: 9094
         type: nodeport
         tls: false
         configuration:
@@ -129,7 +127,6 @@ spec:
       log.retention.hours: 168
       log.segment.bytes: 1073741824
       log.retention.check.interval.ms: 300000
-      inter.broker.protocol.version: "4.2"
   entityOperator:
     topicOperator: {}
     userOperator: {}
