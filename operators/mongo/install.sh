@@ -37,6 +37,9 @@ helm repo update mongodb
 echo "==> Creating namespace: $NAMESPACE"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
+echo "==> Creating service account: mongodb-database in $NAMESPACE"
+kubectl create serviceaccount mongodb-database -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 echo "==> Installing mongodb-community-operator..."
 helm upgrade --install mongodb-community-operator mongodb/community-operator \
   -f "$SCRIPT_DIR/operator.yml" \
