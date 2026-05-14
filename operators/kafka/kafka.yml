@@ -1,10 +1,9 @@
-# Kafka single-node CR — combined controller + broker (KRaft, no ZooKeeper)
-# Applied with: kubectl apply -f kafka.yml
+# Kafka standalone — single combined controller+broker (KRaft, no ZooKeeper)
+# Use for dev / single-node environments.
+# For HA production, use kafka-production.yml instead.
 #
-# Use this for dev / single-node environments.
-# For HA (3 controllers + 3 brokers), use kafka-production.yml instead.
-#
-# Requires: strimzi-kafka-operator installed in kafka-operator namespace
+# Apply: kubectl apply -f kafka.yml
+# Requires: strimzi-kafka-operator running in kafka-operator namespace
 
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
@@ -25,6 +24,7 @@ spec:
         type: persistent-claim
         size: 10Gi
         class: longhorn
+        kraftMetadata: shared
         deleteClaim: true
   resources:
     requests:
@@ -40,13 +40,10 @@ kind: Kafka
 metadata:
   name: kafka
   namespace: kafka
-  annotations:
-    strimzi.io/node-pools: enabled
-    strimzi.io/kraft: enabled
 spec:
   kafka:
     version: 4.2.0
-    metadataVersion: 4.2-IV0
+    metadataVersion: 4.2-IV1
     listeners:
       - name: plain
         port: 9092
@@ -65,12 +62,9 @@ spec:
       transaction.state.log.min.isr: 1
       default.replication.factor: 1
       min.insync.replicas: 1
-      log.retention.hours: 168         # 7 days
-      log.segment.bytes: 1073741824    # 1 GiB
+      log.retention.hours: 168
+      log.segment.bytes: 1073741824
       log.retention.check.interval.ms: 300000
   entityOperator:
     topicOperator: {}
     userOperator: {}
-  kafkaExporter:
-    topicRegex: ".*"
-    groupRegex: ".*"

@@ -1,55 +1,71 @@
 #!/bin/bash
-
-# Kafka Operator (Strimzi) — operator install + CR apply
+# Strimzi Kafka operator install + Kafka CR apply
 #
 # Usage:
-#   ./install.sh                        # standalone Kafka (single combined node, dev)
-#   KAFKA_MODE=production ./install.sh  # production (3 controllers + 3 brokers, KRaft)
+#   ./install.sh                        # standalone (single node, dev)
+#   KAFKA_MODE=production ./install.sh  # production (3 controllers + 3 brokers, HA)
 #
 # Optional env vars:
-#   KAFKA_MODE  — "standalone" (default) or "production"
+#   KAFKA_MODE   — "standalone" (default) or "production"
+#   KAFKA_NS     — Kafka CR namespace (default: kafka)
+#   OPERATOR_NS  — operator namespace   (default: kafka-operator)
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 KAFKA_MODE="${KAFKA_MODE:-standalone}"
-OPERATOR_NAMESPACE="kafka-operator"
-NAMESPACE="kafka"
+KAFKA_NS="${KAFKA_NS:-kafka}"
+OPERATOR_NS="${OPERATOR_NS:-kafka-operator}"
 
-# 1. Install Strimzi operator via Helm (idempotent)
+echo "==> Mode: $KAFKA_MODE | Kafka namespace: $KAFKA_NS | Operator namespace: $OPERATOR_NS"
+
+# 1. Strimzi Helm repo
+echo "==> Adding Strimzi Helm repo..."
 helm repo add strimzi https://strimzi.io/charts 2>/dev/null || true
 helm repo update strimzi
 
-# 2. Create the kafka namespace first (operator watchNamespaces needs it to exist)
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+# 2. Create kafka namespace (operator watchNamespaces requires it to exist first)
+echo "==> Creating namespace: $KAFKA_NS"
+kubectl create namespace "$KAFKA_NS" --dry-run=client -o yaml | kubectl apply -f -
 
+# 3. Install operator
+echo "==> Installing strimzi-kafka-operator..."
 helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
   -f "$SCRIPT_DIR/operator.yml" \
-  -n "$OPERATOR_NAMESPACE" --create-namespace --wait
+  -n "$OPERATOR_NS" --create-namespace --wait
 
-echo "Operator ready in namespace: $OPERATOR_NAMESPACE"
+echo "==> Operator ready in namespace: $OPERATOR_NS"
 
-# Wait for Strimzi CRDs to be established then flush kubectl discovery cache
-kubectl wait --for=condition=Established crd/kafkas.kafka.strimzi.io crd/kafkanodepools.kafka.strimzi.io --timeout=60s
+# 4. Wait for CRDs then flush kubectl discovery cache
+echo "==> Waiting for Strimzi CRDs..."
+kubectl wait --for=condition=Established \
+  crd/kafkas.kafka.strimzi.io \
+  crd/kafkanodepools.kafka.strimzi.io \
+  --timeout=90s
 rm -rf "${HOME}/.kube/cache/discovery/"
 
-# 3. Apply the Kafka CR
+# 5. Apply Kafka CR
 case "$KAFKA_MODE" in
   production)
+    echo "==> Applying production Kafka cluster (3 controllers + 3 brokers)..."
     kubectl apply -f "$SCRIPT_DIR/kafka-production.yml"
-    echo "Kafka production cluster (3 controllers + 3 brokers) applied."
-    echo "Watch status:  kubectl get kafka,kafkanodepool -n $NAMESPACE"
-    echo "Broker pods:   kubectl get pods -n $NAMESPACE -l strimzi.io/pool-name=broker"
-    echo "Bootstrap svc: kubectl get svc kafka-kafka-bootstrap -n $NAMESPACE"
-    echo "External:      NodePorts 32094-32096 on each broker (bootstrap: 32090)"
+    echo ""
+    echo "Production Kafka applied. Useful commands:"
+    echo "  Status:        kubectl get kafka,kafkanodepool -n $KAFKA_NS"
+    echo "  Broker pods:   kubectl get pods -n $KAFKA_NS -l strimzi.io/pool-name=broker"
+    echo "  Bootstrap svc: kubectl get svc kafka-kafka-bootstrap -n $KAFKA_NS"
+    echo "  Internal:      kafka-kafka-bootstrap.$KAFKA_NS:9092"
+    echo "  External:      NodePort 32090 (bootstrap), 32094-32096 (per broker)"
     ;;
   standalone|*)
+    echo "==> Applying standalone Kafka cluster (single combined node)..."
     kubectl apply -f "$SCRIPT_DIR/kafka.yml"
-    echo "Kafka standalone applied."
-    echo "Watch status:  kubectl get kafka,kafkanodepool -n $NAMESPACE"
-    echo "Bootstrap svc: kubectl get svc kafka-kafka-bootstrap -n $NAMESPACE"
-    echo "Internal:      kafka-kafka-bootstrap.$NAMESPACE:9092"
-    echo "External:      NodePort 32090 (bootstrap)"
+    echo ""
+    echo "Standalone Kafka applied. Useful commands:"
+    echo "  Status:        kubectl get kafka,kafkanodepool -n $KAFKA_NS"
+    echo "  Bootstrap svc: kubectl get svc kafka-kafka-bootstrap -n $KAFKA_NS"
+    echo "  Internal:      kafka-kafka-bootstrap.$KAFKA_NS:9092"
+    echo "  External:      NodePort 32090"
     ;;
 esac

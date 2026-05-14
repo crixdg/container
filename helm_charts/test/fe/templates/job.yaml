@@ -1,0 +1,26 @@
+# charts/frontend/templates/job.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dns-test-{{ randAlphaNum 5 | lower }}
+  namespace: {{ .Values.namespace }}
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: curl
+          image: curlimages/curl:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "=== DNS resolution ===" && \
+              nslookup backend.ns-backend.svc.cluster.local && \
+              echo "=== HTTP call ===" && \
+              curl -sv {{ .Values.backendUrl }}
