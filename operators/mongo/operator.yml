@@ -8,6 +8,9 @@
 
 operator:
   watchNamespace: "mongodb"
+  # createOperatorServiceAccount required when operator namespace != watch namespace
+  # so the chart creates the mongodb-database SA + RBAC in the watched namespace
+  createOperatorServiceAccount: true
   resources:
     requests:
       cpu: 100m
