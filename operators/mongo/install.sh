@@ -15,7 +15,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 MONGO_MODE="${MONGO_MODE:-standalone}"
-OPERATOR_NAMESPACE="mongodb-operator"
+OPERATOR_NAMESPACE="mongodb"
 NAMESPACE="mongodb"
 
 echo "==> Mode: $MONGO_MODE | MongoDB namespace: $NAMESPACE | Operator namespace: $OPERATOR_NAMESPACE"
@@ -36,9 +36,6 @@ helm repo update mongodb
 # 2. Create the mongodb namespace
 echo "==> Creating namespace: $NAMESPACE"
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-
-echo "==> Creating service account: mongodb-database in $NAMESPACE"
-kubectl create serviceaccount mongodb-database -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 echo "==> Installing mongodb-community-operator..."
 helm upgrade --install mongodb-community-operator mongodb/community-operator \
