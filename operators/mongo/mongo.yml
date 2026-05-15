@@ -69,6 +69,7 @@ spec:
 
   additionalMongodConfig:
     storage.wiredTiger.engineConfig.journalCompressor: zlib
+
 ---
 apiVersion: v1
 kind: Service
