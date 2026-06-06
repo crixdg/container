@@ -1,0 +1,6 @@
+# helm_charts/kafka/akhq/Chart.yaml
+apiVersion: v2
+name: akhq
+description: AKHQ - web UI for Kafka, pointed at the Strimzi cluster in the kafka namespace
+version: 0.1.0
+appVersion: "0.26.0"
