@@ -1,0 +1,68 @@
+# helm_charts/kafka/akhq/values.yaml
+namespace: kafka
+replicas: 1
+
+image:
+  repository: tchiotludo/akhq
+  # Bump to the latest stable tag as needed: https://github.com/tchiotludo/akhq/releases
+  tag: "0.26.0"
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+service:
+  # ClusterIP for in-cluster access; set NodePort + nodePort to expose externally (dev).
+  type: ClusterIP
+  port: 8080
+  nodePort: ""   # e.g. 32100 when type is NodePort
+
+# Rendered verbatim into /app/application.yml under the top-level "akhq:" key.
+#
+# Targets the Strimzi cluster from operators/kafka/ (cluster name "kafka",
+# namespace "kafka"). Both kafka.yml (dev) and kafka-production.yml expose an
+# internal plaintext listener on 9092, so this same connection works against
+# whichever one is applied. Strimzi names the bootstrap service
+# "<cluster>-kafka-bootstrap" -> kafka-kafka-bootstrap.
+akhq:
+  connections:
+    kafka:
+      properties:
+        bootstrap.servers: "kafka-kafka-bootstrap.kafka.svc:9092"
+
+  # --- Production via the authenticated path (SASL_SSL + SCRAM-SHA-512) ---
+  # In-cluster you normally use the plaintext internal listener above. To instead
+  # go through kafka-production.yml's authenticated external listener (the
+  # app-client KafkaUser), add a connection like:
+  #
+  #   kafka-prod:
+  #     properties:
+  #       bootstrap.servers: "kafka-kafka-bootstrap.kafka:9093"
+  #       security.protocol: SASL_SSL
+  #       sasl.mechanism: SCRAM-SHA-512
+  #       sasl.jaas.config: >-
+  #         org.apache.kafka.common.security.scram.ScramLoginModule required
+  #         username="app-client" password="${SASL_PASSWORD}";
+  #       ssl.truststore.location: /etc/kafka/certs/ca.p12
+  #       ssl.truststore.password: "${TRUSTSTORE_PASSWORD}"
+  #       ssl.truststore.type: PKCS12
+  #
+  # Then mount the app-client and kafka-cluster-ca-cert secrets via extraEnv/extraVolumes
+  # (the app-client password lives in secret "app-client", CA in "kafka-cluster-ca-cert").
+
+# Extra env vars (e.g. SASL_PASSWORD from a secret) appended to the container.
+extraEnv: []
+#  - name: SASL_PASSWORD
+#    valueFrom:
+#      secretKeyRef:
+#        name: app-client
+#        key: password
+
+# Extra volumes / mounts (e.g. the cluster CA truststore).
+extraVolumes: []
+extraVolumeMounts: []

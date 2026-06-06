@@ -1,0 +1,9 @@
+# helm_charts/kafka/akhq/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: akhq-config
+  namespace: {{ .Values.namespace }}
+data:
+  application.yml: |
+{{ dict "akhq" .Values.akhq | toYaml | indent 4 }}
