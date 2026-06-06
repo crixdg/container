@@ -5,8 +5,12 @@ replicas: 1
 image:
   repository: tchiotludo/akhq
   # Bump to the latest stable tag as needed: https://github.com/tchiotludo/akhq/releases
-  tag: "0.26.0"
+  tag: "0.27.1"
   pullPolicy: IfNotPresent
+
+# Liveness/readiness HTTP path. AKHQ (through 0.27.1) has no /health endpoint (404),
+# so we probe "/" which 307-redirects to /ui (probes treat 2xx/3xx as healthy).
+probePath: /
 
 resources:
   requests:
@@ -21,6 +25,19 @@ service:
   type: ClusterIP
   port: 8080
   nodePort: ""   # e.g. 32100 when type is NodePort
+
+# L7 access via the k3s-default Traefik ingress controller.
+# nip.io is wildcard DNS: <anything>.<ip>.nip.io resolves to <ip>, so no real
+# DNS records are needed. Point host at the IP that fronts Traefik:
+#   - single node / ServiceLB:  the node's IP        -> akhq.192.168.1.10.nip.io
+#   - Traefik LoadBalancer svc:  its EXTERNAL-IP      (kubectl get svc -n kube-system traefik)
+ingress:
+  enabled: false
+  className: traefik   # matches `kubectl get ingressclass` on stock k3s
+  host: ""             # e.g. akhq.192.168.1.10.nip.io
+  path: /
+  pathType: Prefix
+  annotations: {}
 
 # Rendered verbatim into /app/application.yml under the top-level "akhq:" key.
 #

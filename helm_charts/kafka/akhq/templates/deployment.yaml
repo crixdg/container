@@ -32,16 +32,18 @@ spec:
           ports:
             - name: http
               containerPort: 8080
-          # AKHQ (micronaut) exposes /health on the main HTTP port.
+          # AKHQ (through 0.27.1) does NOT expose /health on the HTTP port (404);
+          # "/" 307-redirects to the UI, which probes accept as success (2xx/3xx).
+          # Override via .Values.probePath if a build exposes a real health endpoint.
           readinessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.probePath }}
               port: http
             initialDelaySeconds: 30
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /health
+              path: {{ .Values.probePath }}
               port: http
             initialDelaySeconds: 60
             periodSeconds: 15
