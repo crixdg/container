@@ -27,7 +27,7 @@ spec:
         size: 8Gi
         class: longhorn
         kraftMetadata: shared
-        deleteClaim: true
+        deleteClaim: false
   resources:
     requests:
       cpu: 500m
@@ -66,7 +66,7 @@ spec:
         size: 30Gi
         class: longhorn
         kraftMetadata: shared
-        deleteClaim: true
+        deleteClaim: false
   resources:
     requests:
       cpu: 1
@@ -107,7 +107,9 @@ spec:
       - name: external
         port: 9094
         type: nodeport
-        tls: false
+        tls: true
+        authentication:
+          type: scram-sha-512
         configuration:
           bootstrap:
             nodePort: 32090
@@ -140,3 +142,21 @@ spec:
       limits:
         cpu: 500m
         memory: 256Mi
+
+---
+# --- Client user (SCRAM-SHA-512) ---
+# Strimzi userOperator generates secret "app-client" in the kafka namespace
+# with the SASL password (key: password / sasl.jaas.config).
+# Authentication only -- the cluster has no authorization enabled, so this
+# user has full access once authenticated. To enforce per-topic ACLs, set
+# kafka.authorization.type: simple on the Kafka CR and add an acls block here.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaUser
+metadata:
+  name: app-client
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: kafka
+spec:
+  authentication:
+    type: scram-sha-512
