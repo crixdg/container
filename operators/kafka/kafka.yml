@@ -1,5 +1,6 @@
 # Kafka standalone — single combined controller+broker (KRaft, no ZooKeeper)
 # Use for dev / single-node environments.
+#
 # For HA production, use kafka-production.yml instead.
 #
 # Apply: kubectl apply -f kafka.yml
@@ -8,7 +9,7 @@
 apiVersion: kafka.strimzi.io/v1
 kind: KafkaNodePool
 metadata:
-  name: combined
+  name: combined # acts as both controller and broker
   namespace: kafka
   labels:
     strimzi.io/cluster: kafka
