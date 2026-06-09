@@ -37,6 +37,10 @@ ingress:
   host: ""             # e.g. akhq.192.168.1.10.nip.io
   path: /
   pathType: Prefix
+  # tlsSecretName: akhq-tls
+  # annotations:
+  #   cert-manager.io/cluster-issuer: homelab-ca-issuer
+  #   traefik.ingress.kubernetes.io/router.tls: "true"
   annotations: {}
 
 # Rendered verbatim into /app/application.yml under the top-level "akhq:" key.
