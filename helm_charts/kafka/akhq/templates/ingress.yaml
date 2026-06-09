@@ -15,8 +15,14 @@ spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
+  {{- if .Values.ingress.tlsSecretName }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tlsSecretName }}
+  {{- end }}
   rules:
-    - host: {{ required "ingress.host is required when ingress.enabled" .Values.ingress.host | quote }}
+    - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
           - path: {{ .Values.ingress.path }}
