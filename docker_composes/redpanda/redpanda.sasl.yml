@@ -1,0 +1,33 @@
+services:
+  redpanda:
+    command:
+      - redpanda
+      - start
+      - --kafka-addr INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      - --advertise-kafka-addr INTERNAL://redpanda:9093,EXTERNAL://${REDPANDA_HOST:-localhost}:9092
+      - --rpc-addr redpanda:33145
+      - --advertise-rpc-addr redpanda:33145
+      - --smp 1
+      - --mode dev-container
+      - --default-log-level=warn
+      - --set redpanda.enable_sasl=true
+      - --set redpanda.superusers=["admin"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9644/v1/status/ready || exit 1"]
+
+  redpanda-init:
+    image: redpandadata/redpanda:${REDPANDA_VERSION}
+    container_name: redpanda-init
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        rpk acl user create admin \
+          -p "${REDPANDA_SASL_PASSWORD:-redpanda-secret}" \
+          --mechanism SCRAM-SHA-256 \
+          --api-urls http://redpanda:9644
+    networks:
+      - redpanda_net
+    restart: "no"

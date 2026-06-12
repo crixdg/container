@@ -1,0 +1,14 @@
+services:
+  console:
+    image: redpandadata/console:${CONSOLE_VERSION}
+    container_name: redpanda-console
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: "redpanda:9093"
+    networks:
+      - redpanda_net
+
+networks:
+  redpanda_net:
+    external: true
