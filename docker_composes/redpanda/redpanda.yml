@@ -1,0 +1,34 @@
+services:
+  redpanda:
+    image: redpandadata/redpanda:${REDPANDA_VERSION}
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --kafka-addr INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      - --advertise-kafka-addr INTERNAL://redpanda:9093,EXTERNAL://${REDPANDA_HOST:-localhost}:9092
+      - --rpc-addr redpanda:33145
+      - --advertise-rpc-addr redpanda:33145
+      - --smp 1
+      - --mode dev-container
+      - --default-log-level=warn
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - redpanda_net
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info --brokers localhost:9093 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  redpanda_data:
+
+networks:
+  redpanda_net:
+    name: redpanda_net
