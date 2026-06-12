@@ -1,0 +1,14 @@
+services:
+  akhq:
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            local:
+              properties:
+                bootstrap.servers: "kafka:9093"
+                security.protocol: SASL_PLAINTEXT
+                sasl.mechanism: PLAIN
+                sasl.jaas.config: >-
+                  org.apache.kafka.common.security.plain.PlainLoginModule required
+                  username="kafka" password="kafka-secret";
