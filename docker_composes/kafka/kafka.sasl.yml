@@ -1,0 +1,23 @@
+services:
+  kafka:
+    environment:
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:SASL_PLAINTEXT,EXTERNAL:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="kafka"
+        password="${KAFKA_SASL_PASSWORD:-kafka-secret}"
+        user_kafka="${KAFKA_SASL_PASSWORD:-kafka-secret}";
+      KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: >-
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="kafka"
+        password="${KAFKA_SASL_PASSWORD:-kafka-secret}"
+        user_kafka="${KAFKA_SASL_PASSWORD:-kafka-secret}";
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          printf 'security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka" password="${KAFKA_SASL_PASSWORD:-kafka-secret}";\n'
+          > /tmp/sasl.properties &&
+          /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9093 --command-config /tmp/sasl.properties
