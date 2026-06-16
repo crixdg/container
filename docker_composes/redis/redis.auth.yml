@@ -1,0 +1,12 @@
+services:
+  redis:
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        exec redis-server \
+          --user "redis-admin on >${REDIS_PASSWORD:-redis-secret} ~* &* +@all" \
+          --user "default off"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli -u "redis://redis-admin:${REDIS_PASSWORD:-redis-secret}@localhost:6379" ping

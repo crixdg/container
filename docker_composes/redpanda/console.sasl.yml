@@ -4,5 +4,5 @@ services:
       KAFKA_BROKERS: "redpanda:9093"
       KAFKA_SASL_ENABLED: "true"
       KAFKA_SASL_MECHANISM: SCRAM-SHA-256
-      KAFKA_SASL_USERNAME: admin
+      KAFKA_SASL_USERNAME: redpanda-admin
       KAFKA_SASL_PASSWORD: "${REDPANDA_SASL_PASSWORD:-redpanda-secret}"
