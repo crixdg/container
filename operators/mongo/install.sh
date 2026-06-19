@@ -62,7 +62,7 @@ case "$MONGO_MODE" in
     echo "MongoDB ReplicaSet applied. Useful commands:"
     echo "  Status:  kubectl get mongodbcommunity -n $NAMESPACE"
     echo "  Internal: mongo-svc.$NAMESPACE.svc.cluster.local:27017"
-    echo "  Connect:  mongodb://admin:<password>@mongo-svc.$NAMESPACE.svc.cluster.local:27017/admin?replicaSet=mongo"
+    echo "  Connect:  mongodb://mongo-admin:<password>@mongo-svc.$NAMESPACE.svc.cluster.local:27017/admin?replicaSet=mongo"
     ;;
   standalone|*)
     echo "==> Applying MongoDB standalone (1-member ReplicaSet)..."
@@ -70,7 +70,7 @@ case "$MONGO_MODE" in
     echo ""
     echo "MongoDB standalone applied. Useful commands:"
     echo "  Status:  kubectl get mongodbcommunity -n $NAMESPACE"
-    echo "  Connect: kubectl exec -it mongo-0 -n $NAMESPACE -- mongosh -u admin -p \$MONGO_PASSWORD"
-    echo "  Connect: mongodb://admin:<password>@mongo-svc.$NAMESPACE.svc.cluster.local:27017/admin?replicaSet=mongo"
+    echo "  Connect: kubectl exec -it mongo-0 -n $NAMESPACE -- mongosh -u mongo-admin -p \$MONGO_PASSWORD"
+    echo "  Connect: mongodb://mongo-admin:<password>@mongo-svc.$NAMESPACE.svc.cluster.local:27017/admin?replicaSet=mongo"
     ;;
 esac

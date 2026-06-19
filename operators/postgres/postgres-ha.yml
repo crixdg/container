@@ -19,10 +19,18 @@ spec:
 
   bootstrap:
     initdb:
-      database: app
-      owner: app
+      database: postgres
+      owner: pg-admin
       secret:
         name: postgres-app-password
+
+  managed:
+    roles:
+      - name: pg-admin
+        superuser: true
+        login: true
+        passwordSecret:
+          name: postgres-app-password
 
   # Keep 1 synchronous replica — guarantees no data loss on primary failure
   minSyncReplicas: 1
