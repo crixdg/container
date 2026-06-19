@@ -6,7 +6,7 @@ services:
       - redpanda
       - start
       - --kafka-addr INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
-      - --advertise-kafka-addr INTERNAL://redpanda:9093,EXTERNAL://${REDPANDA_HOST:-localhost}:9092
+      - --advertise-kafka-addr INTERNAL://redpanda:9093,EXTERNAL://${REDPANDA_HOST}:9092
       - --rpc-addr redpanda:33145
       - --advertise-rpc-addr redpanda:33145
       - --smp 1
