@@ -6,6 +6,9 @@ services:
       - "8080:8080"
     environment:
       KAFKA_BROKERS: "redpanda:9093"
+    depends_on:
+      redpanda:
+        condition: service_healthy
     networks:
       - redpanda_net
 

@@ -4,9 +4,9 @@ services:
     command:
       - |
         exec redis-server \
-          --user "redis-admin on >${REDIS_PASSWORD:-redis-secret} ~* &* +@all" \
+          --user "${REDIS_USER} on >${REDIS_PASSWORD} ~* &* +@all" \
           --user "default off"
     healthcheck:
       test:
         - CMD-SHELL
-        - redis-cli -u "redis://redis-admin:${REDIS_PASSWORD:-redis-secret}@localhost:6379" ping
+        - redis-cli -u "redis://${REDIS_USER}:${REDIS_PASSWORD}@localhost:6379" ping
