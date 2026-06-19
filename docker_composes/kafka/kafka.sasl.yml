@@ -6,18 +6,18 @@ services:
       KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
       KAFKA_LISTENER_NAME_INTERNAL_PLAIN_SASL_JAAS_CONFIG: >-
         org.apache.kafka.common.security.plain.PlainLoginModule required
-        username="kafka-admin"
-        password="${KAFKA_SASL_PASSWORD:-kafka-secret}"
-        user_kafka-admin="${KAFKA_SASL_PASSWORD:-kafka-secret}";
+        username="${KAFKA_SASL_USER}"
+        password="${KAFKA_SASL_PASSWORD}"
+        user_${KAFKA_SASL_USER}="${KAFKA_SASL_PASSWORD}";
       KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG: >-
         org.apache.kafka.common.security.plain.PlainLoginModule required
-        username="kafka-admin"
-        password="${KAFKA_SASL_PASSWORD:-kafka-secret}"
-        user_kafka-admin="${KAFKA_SASL_PASSWORD:-kafka-secret}";
+        username="${KAFKA_SASL_USER}"
+        password="${KAFKA_SASL_PASSWORD}"
+        user_${KAFKA_SASL_USER}="${KAFKA_SASL_PASSWORD}";
     healthcheck:
       test:
         - CMD-SHELL
         - >-
-          printf 'security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka-admin" password="${KAFKA_SASL_PASSWORD:-kafka-secret}";\n'
+          printf 'security.protocol=SASL_PLAINTEXT\nsasl.mechanism=PLAIN\nsasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="${KAFKA_SASL_USER}" password="${KAFKA_SASL_PASSWORD}";\n'
           > /tmp/sasl.properties &&
           /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9093 --command-config /tmp/sasl.properties
