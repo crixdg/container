@@ -23,7 +23,7 @@ spec:
       modes: ["SCRAM"]
 
   users:
-    - name: admin
+    - name: mongo-admin
       db: admin
       passwordSecretRef:
         name: mongo-admin-password
