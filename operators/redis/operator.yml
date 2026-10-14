@@ -7,13 +7,12 @@
 
 redisOperator:
   watchNamespace: "redis"
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
-      memory: 512Mi
+  metrics:
+    enabled: true
 
-metrics:
-  enabled: true  # exposes /metrics on :8080 for Prometheus scraping
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi

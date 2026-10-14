@@ -13,16 +13,14 @@ metadata:
   namespace: redis
 data:
   redis-additional.conf: |
-    # keeps usage below the 512Mi limit
-    maxmemory 400mb
-    # evicts least-recently-used keys when full
-    maxmemory-policy allkeys-lru
-    # disables AOF (storage-backed persistence is handled by the PVC)
+    maxmemory 1536mb
+    maxmemory-policy noeviction
     appendonly no
-    # keep-alive for TCP connections for 1 minute
+    save ""
+    io-threads 2
+    tcp-backlog 4096
     tcp-keepalive 60
-    # close idle connections after 5 minutes
-    timeout 300
+    timeout 0
 
 ---
 apiVersion: redis.redis.opstreelabs.in/v1beta2
@@ -36,38 +34,25 @@ spec:
     imagePullPolicy: IfNotPresent
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 2
+        memory: 2Gi
       limits:
-        memory: 512Mi
-    # Uncomment to enable password auth (create secret first — see install.sh)
-    # redisSecret:
-    #   name: redis-secret
-    #   key: password
-
-  storage:
-    volumeClaimTemplate:
-      spec:
-        storageClassName: longhorn
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 5Gi
+        cpu: 2
+        memory: 2Gi
 
   redisConfig:
     additionalRedisConfig: redis-config
 
   redisExporter:
-    enabled: false  # set true when kube-prometheus-stack is installed
+    enabled: true
     image: quay.io/opstree/redis-exporter:v1.83.0
     resources:
       requests:
-        cpu: 50m
+        cpu: 100m
         memory: 64Mi
       limits:
         cpu: 100m
-        memory: 128Mi
+        memory: 64Mi
 
   livenessProbe:
     initialDelaySeconds: 15

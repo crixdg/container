@@ -10,6 +10,7 @@
 # Optional env vars:
 #   REDIS_MODE      — "standalone" (default), "replication", or "cluster"
 #   REDIS_PASSWORD  — if set, creates a redis-secret in the redis namespace
+#   REDIS_OPERATOR_VERSION - operator chart version (default: 0.27.0)
 
 set -euo pipefail
 
@@ -18,6 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REDIS_MODE="${REDIS_MODE:-standalone}"
 OPERATOR_NAMESPACE="redis-operator"
 NAMESPACE="redis"
+REDIS_OPERATOR_VERSION="${REDIS_OPERATOR_VERSION:-0.27.0}"
 
 echo "==> Mode: $REDIS_MODE | Redis namespace: $NAMESPACE | Operator namespace: $OPERATOR_NAMESPACE"
 
@@ -28,6 +30,7 @@ helm repo update ot-helm
 
 echo "==> Installing redis-operator..."
 helm upgrade --install redis-operator ot-helm/redis-operator \
+  --version "$REDIS_OPERATOR_VERSION" \
   -f "$SCRIPT_DIR/operator.yml" \
   -n "$OPERATOR_NAMESPACE" --create-namespace --wait
 
@@ -75,3 +78,20 @@ case "$REDIS_MODE" in
     echo "  Connect: kubectl exec -it redis-0 -n $NAMESPACE -- redis-cli ping"
     ;;
 esac
+
+# 5. PodMonitors + Grafana dashboards (skipped when kube-prometheus-stack is not installed)
+if kubectl get crd podmonitors.monitoring.coreos.com &>/dev/null; then
+  echo ""
+  echo "==> Applying PodMonitors and Grafana dashboards..."
+  kubectl apply -f "$SCRIPT_DIR/monitoring/podmonitor.yml"
+  kubectl create configmap redis-grafana-dashboards -n "$NAMESPACE" \
+    --from-file="$SCRIPT_DIR/monitoring/dashboards/" \
+    --dry-run=client -o yaml \
+    | kubectl label --local -f - grafana_dashboard=1 -o yaml \
+    | kubectl annotate --local -f - grafana_folder=Redis -o yaml \
+    | kubectl apply --server-side --force-conflicts -f -
+  echo "    Grafana folder: Redis"
+else
+  echo ""
+  echo "==> PodMonitor CRD not found, skipping monitoring (install kube-prometheus-stack first)"
+fi

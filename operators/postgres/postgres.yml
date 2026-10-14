@@ -24,16 +24,16 @@ spec:
         name: postgres-app-password
 
   storage:
-    storageClass: longhorn
-    size: 10Gi
+    storageClass: local-path
+    size: 30Gi
 
   resources:
     requests:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 2
+      memory: 5Gi
     limits:
-      cpu: 1
-      memory: 1Gi
+      cpu: 2
+      memory: 5Gi
 
   managed:
     roles:
@@ -45,10 +45,23 @@ spec:
 
   postgresql:
     parameters:
-      max_connections: "100"
-      shared_buffers: "128MB"
-      effective_cache_size: "512MB"
-      wal_level: logical
+      max_connections: "200"
+      shared_buffers: "1280MB"
+      effective_cache_size: "3584MB"
+      work_mem: "16MB"
+      maintenance_work_mem: "256MB"
+      max_worker_processes: "4"
+      max_parallel_workers: "2"
+      max_parallel_workers_per_gather: "1"
+      wal_buffers: "16MB"
+      max_wal_size: "4GB"
+      min_wal_size: "1GB"
+      checkpoint_completion_target: "0.9"
+      wal_compression: "lz4"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      pg_stat_statements.max: "10000"
+      pg_stat_statements.track: "all"
 
 ---
 apiVersion: v1

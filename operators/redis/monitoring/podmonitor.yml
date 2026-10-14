@@ -1,0 +1,16 @@
+# Redis exporter PodMonitor
+#
+# Apply: kubectl apply -f podmonitor.yml
+# Requires: kube-prometheus-stack (PodMonitor CRD)
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: redis
+  namespace: redis
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  podMetricsEndpoints:
+    - port: redis-exporter

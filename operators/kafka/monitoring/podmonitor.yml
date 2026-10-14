@@ -1,0 +1,62 @@
+# Strimzi PodMonitors, based on packaging/examples/metrics/prometheus-install/pod-monitors (Strimzi 1.3.0)
+# The relabelings add the strimzi_io_* labels the Strimzi Grafana dashboards filter on.
+#
+# Apply: kubectl apply -f podmonitor.yml
+# Requires: kube-prometheus-stack (PodMonitor CRD)
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kafka-resources-metrics
+  namespace: kafka
+spec:
+  selector:
+    matchExpressions:
+      - key: strimzi.io/kind
+        operator: In
+        values: ["Kafka"]
+  podMetricsEndpoints:
+    - path: /metrics
+      port: tcp-prometheus
+      relabelings:
+        - regex: __meta_kubernetes_pod_label_(strimzi_io_.+)
+          replacement: $1
+          action: labelmap
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: kubernetes_pod_name
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node_name
+        - sourceLabels: [__meta_kubernetes_pod_host_ip]
+          targetLabel: node_ip
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: entity-operator-metrics
+  namespace: kafka
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: entity-operator
+  podMetricsEndpoints:
+    - path: /metrics
+      port: healthcheck-to
+    - path: /metrics
+      port: healthcheck-uo
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cluster-operator-metrics
+  namespace: kafka-operator
+spec:
+  selector:
+    matchLabels:
+      strimzi.io/kind: cluster-operator
+  podMetricsEndpoints:
+    - path: /metrics
+      port: http

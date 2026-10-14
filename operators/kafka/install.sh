@@ -9,6 +9,7 @@
 #   KAFKA_MODE   — "standalone" (default) or "production"
 #   KAFKA_NS     — Kafka CR namespace (default: kafka)
 #   OPERATOR_NS  — operator namespace   (default: kafka-operator)
+#   STRIMZI_VERSION - operator chart version (default: 1.3.0)
 
 set -euo pipefail
 
@@ -17,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KAFKA_MODE="${KAFKA_MODE:-standalone}"
 KAFKA_NS="${KAFKA_NS:-kafka}"
 OPERATOR_NS="${OPERATOR_NS:-kafka-operator}"
+STRIMZI_VERSION="${STRIMZI_VERSION:-1.3.0}"
 
 echo "==> Mode: $KAFKA_MODE | Kafka namespace: $KAFKA_NS | Operator namespace: $OPERATOR_NS"
 
@@ -32,6 +34,7 @@ kubectl create namespace "$KAFKA_NS" --dry-run=client -o yaml | kubectl apply -f
 # 3. Install operator
 echo "==> Installing strimzi-kafka-operator..."
 helm upgrade --install strimzi-kafka-operator strimzi/strimzi-kafka-operator \
+  --version "$STRIMZI_VERSION" \
   -f "$SCRIPT_DIR/operator.yml" \
   -n "$OPERATOR_NS" --create-namespace --wait
 
@@ -69,3 +72,20 @@ case "$KAFKA_MODE" in
     echo "  External:      NodePort 32090"
     ;;
 esac
+
+# 6. PodMonitors + Grafana dashboards (skipped when kube-prometheus-stack is not installed)
+if kubectl get crd podmonitors.monitoring.coreos.com &>/dev/null; then
+  echo ""
+  echo "==> Applying PodMonitors and Grafana dashboards..."
+  kubectl apply -f "$SCRIPT_DIR/monitoring/podmonitor.yml"
+  kubectl create configmap kafka-grafana-dashboards -n "$KAFKA_NS" \
+    --from-file="$SCRIPT_DIR/monitoring/dashboards/" \
+    --dry-run=client -o yaml \
+    | kubectl label --local -f - grafana_dashboard=1 -o yaml \
+    | kubectl annotate --local -f - grafana_folder=Kafka -o yaml \
+    | kubectl apply --server-side --force-conflicts -f -
+  echo "    Grafana folder: Kafka"
+else
+  echo ""
+  echo "==> PodMonitor CRD not found, skipping monitoring (install kube-prometheus-stack first)"
+fi

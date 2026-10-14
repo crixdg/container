@@ -37,11 +37,11 @@ spec:
   maxSyncReplicas: 1
 
   storage:
-    storageClass: longhorn
+    storageClass: local-path
     size: 50Gi
 
   walStorage:
-    storageClass: longhorn
+    storageClass: local-path
     size: 10Gi
 
   resources:

@@ -9,6 +9,7 @@
 # Optional env vars:
 #   POSTGRES_MODE      — "standalone" (default) or "ha"
 #   POSTGRES_PASSWORD  — app user password; required on first install
+#   CNPG_VERSION       - operator chart version (default: 0.29.1)
 
 set -euo pipefail
 
@@ -17,6 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POSTGRES_MODE="${POSTGRES_MODE:-standalone}"
 OPERATOR_NAMESPACE="cnpg-system"
 NAMESPACE="postgres"
+CNPG_VERSION="${CNPG_VERSION:-0.29.1}"
 
 echo "==> Mode: $POSTGRES_MODE | Postgres namespace: $NAMESPACE | Operator namespace: $OPERATOR_NAMESPACE"
 
@@ -35,6 +37,7 @@ helm repo update cnpg
 
 echo "==> Installing cloudnative-pg operator..."
 helm upgrade --install cnpg cnpg/cloudnative-pg \
+  --version "$CNPG_VERSION" \
   -f "$SCRIPT_DIR/operator.yml" \
   -n "$OPERATOR_NAMESPACE" --create-namespace --wait
 
@@ -77,3 +80,20 @@ case "$POSTGRES_MODE" in
     echo "  Connect:  kubectl cnpg psql postgres -n $NAMESPACE"
     ;;
 esac
+
+# 5. PodMonitors + Grafana dashboards (skipped when kube-prometheus-stack is not installed)
+if kubectl get crd podmonitors.monitoring.coreos.com &>/dev/null; then
+  echo ""
+  echo "==> Applying PodMonitors and Grafana dashboards..."
+  kubectl apply -f "$SCRIPT_DIR/monitoring/podmonitor.yml"
+  kubectl create configmap postgres-grafana-dashboards -n "$NAMESPACE" \
+    --from-file="$SCRIPT_DIR/monitoring/dashboards/" \
+    --dry-run=client -o yaml \
+    | kubectl label --local -f - grafana_dashboard=1 -o yaml \
+    | kubectl annotate --local -f - grafana_folder=Postgres -o yaml \
+    | kubectl apply --server-side --force-conflicts -f -
+  echo "    Grafana folder: Postgres"
+else
+  echo ""
+  echo "==> PodMonitor CRD not found, skipping monitoring (install kube-prometheus-stack first)"
+fi
