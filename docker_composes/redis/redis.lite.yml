@@ -1,0 +1,15 @@
+services:
+  redis:
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "3600 1 300 100"
+      - --appendonly
+      - "no"
+    cpus: 0.5
+    mem_limit: 384m

@@ -1,0 +1,7 @@
+services:
+  akhq:
+    restart: unless-stopped
+    environment:
+      JAVA_OPTS: -Xms128m -Xmx256m -XX:+UseSerialGC
+    cpus: 0.5
+    mem_limit: 448m

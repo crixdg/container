@@ -1,0 +1,13 @@
+services:
+  kafka:
+    restart: unless-stopped
+    environment:
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx512m
+      KAFKA_NUM_NETWORK_THREADS: 2
+      KAFKA_NUM_IO_THREADS: 2
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_LOG_RETENTION_HOURS: 72
+      KAFKA_LOG_SEGMENT_BYTES: 268435456
+    cpus: 1.0
+    mem_limit: 1g
+    mem_reservation: 768m
